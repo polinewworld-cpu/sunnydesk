@@ -1,0 +1,11 @@
+{
+  "private": true,
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "check": "node scripts/check.mjs",
+    "deploy": "npm run build && firebase deploy --only hosting"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2"
+  }
+}

@@ -1,0 +1,83 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "accounts": {
+      ".read": "auth != null",
+      "$uid": {
+        ".write": "auth != null && ($uid === auth.uid || root.child('accounts').child(auth.uid).child('isMaster').val() === true)"
+      }
+    },
+    "users": {
+      "$uid": {
+        ".read": "auth != null && $uid === auth.uid",
+        ".write": "auth != null && $uid === auth.uid",
+        "saved_news": {
+          ".read": "auth != null && ($uid === auth.uid || root.child('accounts').child(auth.uid).exists())"
+        }
+      }
+    },
+    "notices":          { ".read": "auth != null", ".write": "auth != null" },
+    "notice_confirms":  { ".read": "auth != null", ".write": "auth != null" },
+    "notice_comments":  { ".read": "auth != null", ".write": "auth != null" },
+    "tabs_channels":    { ".read": "auth != null", ".write": "auth != null" },
+    "quick_links":      { ".read": "auth != null", ".write": "auth != null" },
+    "news_pool_cache":  { ".read": "auth != null", ".write": "auth != null" },
+    "news_keywords":    { ".read": "auth != null", ".write": "auth != null" },
+    "news_dismissed":   { ".read": "auth != null", ".write": "auth != null" },
+    "disabled_outlets": { ".read": "auth != null", ".write": "auth != null" },
+    "saved_news":       { ".read": "auth != null", ".write": "auth != null" },
+    "custom_feeds":     { ".read": "auth != null", ".write": "auth != null" },
+    "opinion_fav_cafes":{ ".read": "auth != null", ".write": "auth != null" },
+    "opcol_catalog":    { ".read": "auth != null", ".write": "auth != null" },
+    "special_chars": { ".read": "auth != null", ".write": "auth != null" },
+    "recommend": {
+      ".read": "auth != null",
+      ".write": "auth != null",
+      "clusters": { ".indexOn": ["upd", "last"] },
+      "yt":       { ".indexOn": ["ts"] },
+      "sns":      { ".indexOn": ["ts"] }
+    },
+    "admin_config": {
+      ".read": "auth != null",
+      ".write": "auth != null && root.child('accounts').child(auth.uid).child('isMaster').val() === true"
+    },
+    "clients": {
+      "jk": {
+        ".read": false,
+        ".write": false,
+        "accounts": {
+          ".read": "auth != null",
+          "$uid": {
+            ".write": "auth != null && ($uid === auth.uid || root.child('clients').child('jk').child('accounts').child(auth.uid).child('isMaster').val() === true)"
+          }
+        },
+        "users": {
+          "$uid": {
+            ".read": "auth != null && $uid === auth.uid",
+            ".write": "auth != null && $uid === auth.uid"
+          }
+        },
+        "notices":          { ".read": "auth != null", ".write": "auth != null" },
+        "notice_confirms":  { ".read": "auth != null", ".write": "auth != null" },
+        "notice_comments":  { ".read": "auth != null", ".write": "auth != null" },
+        "report_schedule":  { ".read": "auth != null", ".write": "auth != null" },
+        "tabs_channels":    { ".read": "auth != null", ".write": "auth != null" },
+        "quick_links":      { ".read": "auth != null", ".write": "auth != null" },
+        "news_pool_cache":  { ".read": "auth != null", ".write": "auth != null" },
+        "news_keywords":    { ".read": "auth != null", ".write": "auth != null" },
+        "news_dismissed":   { ".read": "auth != null", ".write": "auth != null" },
+        "disabled_outlets": { ".read": "auth != null", ".write": "auth != null" },
+        "saved_news":       { ".read": "auth != null", ".write": "auth != null" },
+        "custom_feeds":     { ".read": "auth != null", ".write": "auth != null" },
+        "opinion_fav_cafes":{ ".read": "auth != null", ".write": "auth != null" },
+        "keyword_suggestion":           { ".read": "auth != null", ".write": "auth != null" },
+        "keyword_suggestion_blacklist": { ".read": "auth != null", ".write": "auth != null" },
+        "admin_config": {
+          ".read": "auth != null",
+          ".write": "auth != null && root.child('clients').child('jk').child('accounts').child(auth.uid).child('isMaster').val() === true"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,1450 @@
+<!DOCTYPE html>
+<html lang="ko"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>국회의원 SNS 모니터링 - v2</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<style>
+:root{--line:rgba(0,0,0,.10);--line-soft:rgba(0,0,0,.07);--bg:#f7f7f6;--ink:#202124;--faint:#5F6368;--blue:#18181b;--blue-soft:rgba(0,0,0,.06)}
+*{box-sizing:border-box} body{margin:0;font-family:'Pretendard',-apple-system,BlinkMacSystemFont,'Malgun Gothic',sans-serif;background:#fff;color:var(--ink);-webkit-font-smoothing:antialiased;font-size:14px}
+.header{position:sticky;top:0;z-index:20;background:rgba(255,255,255,.96);backdrop-filter:blur(12px);border-bottom:1px solid var(--line);padding:14px 20px;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.header h1{font-size:17px;font-weight:700;margin:0} .count{font-size:12px;color:var(--faint)}
+#q{flex:1;min-width:200px;max-width:380px;height:36px;border:1px solid var(--line);border-radius:10px;padding:0 16px;font-size:13px;outline:none;background:var(--bg);box-sizing:border-box} #q:focus{border-color:var(--blue);background:#fff;box-shadow:0 0 0 3px rgba(0,0,0,.1)}
+.btn{height:34px;border:1px solid var(--line);border-radius:10px;background:#fff;padding:0 14px;font-size:12.5px;cursor:pointer;font-weight:500;box-sizing:border-box} .btn.on{background:var(--ink);color:#fff;border-color:var(--ink)} .btn.primary{background:var(--blue);border-color:var(--blue);color:#fff;font-weight:600} .btn.danger{color:#C5221F;border-color:#F5C6C4} .btn.danger:hover{background:#FCE8E6}
+/* PC 헤더 통합 모드: 부모의 고정 검색 줄 대신 이 검색 줄을 맨 위에 보이게 — 스크롤과 함께 올라감 (2026-09-24) */
+body.inline-search .header{display:flex!important;position:static;border-bottom:none;background:none;backdrop-filter:none;justify-content:flex-end;gap:8px;align-items:center;padding:14px 20px 0}
+body.inline-search #homeTitle,body.inline-search #totalCount{display:none}
+.filters{padding:12px 20px;border-bottom:1px solid var(--line);display:flex;flex-direction:column;gap:12px;background:#fff}
+.fRow{display:flex;flex-wrap:wrap;gap:7px;align-items:center} .fIco{color:var(--faint);width:17px;height:17px;flex-shrink:0}
+.fDivider{width:1px;height:22px;background:var(--line);flex-shrink:0;margin:0 1px}
+.regSel{height:32px;border:1px solid var(--line);border-radius:8px;padding:0 8px;font-size:13px;background:#fff;cursor:pointer;max-width:160px;box-sizing:border-box}
+.regAddBtn{height:32px;font-size:13px;padding:0 14px;box-sizing:border-box}
+.regChip{height:32px;box-sizing:border-box;border:1px solid transparent;border-radius:8px;background:var(--blue-soft);color:var(--ink);padding:0 6px 0 10px;font-size:13px;font-weight:500;display:inline-flex;align-items:center;gap:4px}
+.regChip .rx{cursor:pointer;font-size:14px;color:var(--ink);opacity:.55;padding:0 4px} .regChip .rx:hover{opacity:1}
+.fTag{height:32px;box-sizing:border-box;border:1px solid var(--line);border-radius:8px;background:#fff;padding:0 13px;font-size:13px;font-weight:500;color:var(--faint);cursor:pointer;display:flex;align-items:center;gap:6px} .fTag.on{background:var(--blue);border-color:transparent;color:#fff}
+.fTag .cnt{background:var(--bg);color:#80868b;border-radius:6px;padding:1px 6px;font-size:10.5px;font-weight:600;min-width:18px;text-align:center} .fTag.on .cnt{background:rgba(255,255,255,.22);color:#fff}
+/* coss ui Radio(https://coss.com/ui/docs/components/radio-group) 규격: 16px 원형 + 체크 시 안쪽에 작은 흰 점 */
+.tierRadio{height:32px;box-sizing:border-box;background:none;border:none;padding:0 10px;font-size:13px;font-weight:500;cursor:pointer;display:flex;align-items:center;gap:8px;color:var(--faint)}
+.tierRadio:hover{color:var(--ink)}
+.tierRadio.on{color:var(--ink);font-weight:600}
+.tierRadio::before{
+  content:"";width:16px;height:16px;border-radius:50%;flex-shrink:0;box-sizing:border-box;
+  border:1px solid rgba(0,0,0,.18);background:#fff;box-shadow:0 1px 2px 0 rgba(0,0,0,.05);
+  transition:background .12s,border-color .12s;
+}
+.tierRadio.on::before{
+  border-color:var(--ink);
+  background:radial-gradient(circle at center, #fff 0 3px, var(--ink) 3.5px 100%);
+}
+.tierRadio .cnt{background:#F1F3F4;color:#80868b;border-radius:6px;padding:1px 6px;font-size:10.5px;font-weight:600} .tierRadio.on .cnt{background:var(--blue-soft);color:var(--ink)}
+#stat{padding:9px 20px;font-size:13px;color:var(--faint);display:flex;gap:10px;align-items:center;flex-wrap:nowrap;overflow-x:auto;min-height:44px;border-bottom:1px solid var(--line);background:#fff} #stat b{color:var(--ink);font-weight:700}
+#stat .statResult{flex-shrink:0;font-weight:600}
+#bulkEdit{display:flex;gap:7px;align-items:center;flex-wrap:nowrap;flex-shrink:0}
+#bulkEdit input, #bulkEdit select{height:30px;border:1px solid var(--line);border-radius:8px;padding:0 9px;font-size:12.5px;background:#fff}
+#bulkEdit .bulkDiv{width:1px;height:20px;background:var(--line);flex-shrink:0}
+#bulkEdit .bulkSelToggle{display:inline-flex;align-items:center;gap:5px;font-size:12.5px;color:var(--ink);cursor:pointer;user-select:none;white-space:nowrap;flex-shrink:0}
+#bulkEdit .bulkSelToggle input{width:15px;height:15px;margin:0;cursor:pointer}
+#bulkEdit .bulkActs{display:inline-flex;align-items:center;gap:6px;flex-shrink:0;transition:opacity .15s}
+#bulkEdit .bulkActs.off{opacity:.38;pointer-events:none}
+#bulkEdit .bulkTagIn{width:100px}
+#bulkEdit .btn.sm{height:30px;padding:0 10px;font-size:12px}
+#bulkEdit #bulkFeedBtn{flex-shrink:0;margin-left:2px}
+#bulkTagBtn{background:#e8f4fd;border-color:#bfe0f7}
+#bulkTagBtn:hover{background:#d9ecfb}
+@media(max-width:768px){
+  body{overflow-x:hidden}
+  #stat{flex-direction:column;align-items:stretch;gap:9px;overflow-x:visible}
+  #stat .statResult{align-self:flex-start}
+  #bulkEdit{flex-wrap:wrap;width:100%;gap:8px}
+  #bulkEdit .bulkDiv{display:none}
+  #bulkEdit .bulkSelToggle{width:100%}
+  #bulkEdit .bulkActs{width:100%;flex-wrap:wrap;gap:8px}
+  #bulkEdit .bulkTagIn{flex:1 1 120px;min-width:0}
+  #bulkEdit #bulkTierSel{flex:1 1 120px}
+  #bulkEdit #bulkFeedBtn{width:100%;margin-left:0}
+  .sidoResetBtn{width:100%}
+  .filters{padding:12px}
+}
+#grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:10px;padding:14px 18px 40px;perspective:1000px;min-height:120px}
+.emptyMsg{grid-column:1/-1;text-align:center;padding:60px 20px;color:var(--faint);font-size:14px;line-height:1.6;background:#F8F9FA;border:1px dashed var(--line);border-radius:12px;margin:20px}
+.flip{position:relative;min-height:160px} .flipInner{position:relative;width:100%;min-height:160px;transition:transform .45s;transform-style:preserve-3d} .flip.flipped .flipInner{transform:rotateY(180deg)}
+.cardFront, .cardBack{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;border:1px solid var(--line);border-radius:12px;background:#fff;overflow:hidden;min-height:160px}
+.cardFront{min-height:160px;display:flex;align-items:flex-start;gap:12px;padding:11px 40px 11px 0;cursor:pointer} .cardFront::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--party-color,#888);border-radius:12px 0 0 12px}
+.cardFront:hover{border-color:var(--line);box-shadow:0 1px 8px rgba(0,0,0,.10)} .flip.on .cardFront{border-color:var(--ink);background:var(--bg)}
+.cardFront .ph{width:50px;height:50px;border-radius:50%;background:#F8F9FA;flex-shrink:0;margin-left:14px;background-size:cover;background-position:center;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:var(--faint);border:1px solid var(--line)}
+.cardFront .main{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px} .cardFront .row1{display:flex;align-items:center;gap:6px} .cardFront .nm{font-size:14.5px;font-weight:600;color:var(--ink)} .cardFront .tierCircle{font-size:12px;line-height:1;color:var(--faint);margin-left:2px} 
+.cardFront .sns{display:flex;gap:6px;align-items:center;margin:4px 0 2px 0;justify-content:flex-start} .cardFront .sns a{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;text-decoration:none;background:#fff;border:1px solid transparent} .cardFront .sns a:hover{background:var(--bg);border-color:var(--line)}
+.cardFront .sns a.fb svg{width:14px;height:14px;fill:#1877F2} .cardFront .sns a.x svg{width:13px;height:13px;fill:#000} .cardFront .sns a.wiki{font-size:11px;font-weight:800;color:#000;background:#F1F3F4;border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center;border:1px solid var(--line)}
+.cardFront .row2{font-size:13.5px;color:#3C4043;white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;line-height:1.5;min-height:40px;margin:2px 0 4px 0}
+.cardFront .tags{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px;justify-content:flex-start;align-content:flex-start} .cardFront .tag{height:22px;border:none;border-radius:6px;padding:0 7px 0 9px;font-size:11px;font-weight:500;color:var(--ink);display:inline-flex;align-items:center;gap:4px;background:var(--blue-soft)} .cardFront .tag .x{width:13px;height:13px;border-radius:50%;background:rgba(0,0,0,.12);color:var(--ink);display:inline-flex;align-items:center;justify-content:center;font-size:9px;cursor:pointer}
+.cardFront input[type=checkbox]{position:absolute;top:10px;right:10px;width:18px;height:18px;z-index:5;accent-color:var(--ink);cursor:pointer}
+.cardBack{transform:rotateY(180deg);padding:11px 14px;display:flex;flex-direction:column;gap:6px;background:var(--bg);overflow:auto} .cardBack .backName{font-size:13.5px;font-weight:700} .cardBack .field{display:flex;gap:8px;align-items:center} .cardBack label{font-size:11px;color:var(--faint);width:36px;flex-shrink:0;font-weight:600} .cardBack input, .cardBack textarea, .cardBack select{flex:1;border:1px solid var(--line);border-radius:8px;padding:5px 8px;font-size:12.5px;outline:none;background:#fff} .cardBack textarea{resize:none;height:42px} .cardBack .hint{font-size:10px;color:var(--faint)}
+#bottomFeed{display:none;background:var(--bg);border-top:1px solid var(--line);padding:0 0 32px}
+#recentTitle{font-size:14px;font-weight:700;padding:14px 20px 10px;display:flex;justify-content:space-between;align-items:center;background:#fff;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:15}
+.feedModeTabs{display:flex;gap:4px}
+.fmTab{border:1px solid var(--line);background:#fff;color:var(--faint);font-size:12.5px;font-weight:600;padding:6px 14px;border-radius:8px;cursor:pointer}
+.fmTab.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.feedSubTitle{padding:14px 20px 4px;font-size:13px;font-weight:600;color:var(--faint);max-width:1100px;margin:0 auto}
+.xFeedEmpty{padding:40px 20px;text-align:center;color:var(--faint);font-size:13px;line-height:1.8}
+.xFeedErrRow{display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap}
+.xFeedAsk{max-width:640px;margin:20px auto;padding:0 20px}
+.xFeedNote{font-size:12px;color:var(--faint);line-height:1.6;margin:6px 0 14px}
+.xFeedNote code{background:var(--bg);padding:1px 6px;border-radius:5px}
+.xFeedAskRow{display:flex;gap:8px;align-items:center}
+.xFeedAskRow input{border:1px solid var(--line);border-radius:8px;padding:8px 12px;font-size:13px;outline:none}
+.xFeedAskRow input#xFeedTopicInput{flex:1}
+.xFeedAskRow input.errShake{animation:xfShake .4s;border-color:#C5221F}
+.xFeedAskRow input:disabled{opacity:.55}
+.xFeedAskRow .btn:disabled{opacity:.55;cursor:default}
+.xFeedBarNote{font-size:11.5px;color:var(--faint);white-space:nowrap}
+@keyframes xfShake{0%,100%{transform:translateX(0)}20%{transform:translateX(-6px)}40%{transform:translateX(6px)}60%{transform:translateX(-4px)}80%{transform:translateX(4px)}}
+.xFeedErr{color:#C5221F;font-size:12.5px;margin-top:8px}
+.xFeedPending{max-width:640px;margin:40px auto;padding:0 20px;text-align:center;font-size:13.5px;color:var(--ink)}
+.xFeedSpinner{width:22px;height:22px;border:2.5px solid var(--line);border-top-color:var(--ink);border-radius:50%;margin:0 auto 14px;animation:xfSpin .8s linear infinite}
+@keyframes xfSpin{to{transform:rotate(360deg)}}
+.xFeedPendingNote{font-size:12px;color:var(--faint);margin-top:8px}
+.xFeedPendingBtns{margin-top:14px;display:flex;gap:8px;justify-content:center}
+.xfSection{max-width:900px;margin:0 auto 22px;padding:0 20px}
+.xfSection.xfExchange .xfSectionTitle{color:#C5221F}
+.xfSectionTitle{font-size:13px;font-weight:700;color:var(--faint);margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.xfCnt{font-weight:500;color:var(--faint)}
+.xfPost{border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-bottom:8px;background:#fff}
+.xfPostHead{display:flex;align-items:baseline;gap:8px;font-size:13px;margin-bottom:6px}
+.xfPostDate{margin-left:auto;color:var(--faint);font-size:11.5px}
+.xfArrow{color:#C5221F;font-weight:600;font-size:12.5px}
+.xfPostText{font-size:13.5px;line-height:1.6;white-space:pre-wrap;margin-bottom:8px}
+.xfPostFoot{display:flex;justify-content:space-between;align-items:center;font-size:11.5px;color:var(--faint)}
+.xfPostFoot a{color:var(--blue);text-decoration:none}
+.xfPostFoot a:hover{text-decoration:underline}
+.xfAiBlock{max-width:900px;margin:0 auto 22px;padding:0 20px}
+.xfAiLoading{display:flex;align-items:center;gap:10px;margin-top:12px;font-size:13px;color:var(--faint)}
+.xfAiLoading .xFeedSpinner{width:16px;height:16px;margin:0;border-width:2px}
+.xfAiErr{margin-top:12px;color:#C5221F;font-size:12.5px}
+.xfAiText{margin-top:14px;padding:16px 18px;background:#fff;border:1px solid var(--line);border-radius:10px;font-size:13.5px;line-height:1.8;white-space:pre-wrap}
+.feedHead{padding:12px 14px 6px;display:flex;justify-content:space-between;align-items:center} .feedHead .who{font-size:13px;font-weight:700} .feedHead .party{font-size:11px;color:var(--faint)}
+.feedBody{padding:0 14px 12px;font-size:13px;line-height:1.6;color:var(--ink);word-break:break-word} .feedMeta{font-size:11px;color:var(--faint);padding:0 14px 10px}
+.feedClip{overflow:hidden;background:#fff;max-height:700px;min-height:120px} .feedClip iframe{width:100%;border:0;display:block;overflow:hidden}
+.feedItem{height:auto}
+.feedItem .feedClip{box-sizing:border-box;overflow:hidden}
+.feedClip::-webkit-scrollbar{display:none}
+.feedClip{scrollbar-width:none;-ms-overflow-style:none}
+
+.feedFooter{padding:8px 12px;display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--line);background:#FAFBFB}
+.checkedBtn{height:24px;border:1px solid var(--line);border-radius:6px;background:#fff;font-size:11px;padding:0 10px;cursor:pointer;color:var(--faint)}
+.hideBtnGroup{display:inline-flex;gap:0;margin-left:auto} .hideBtn{height:24px;border:1px solid var(--line);background:#fff;font-size:10.5px;padding:0 10px;cursor:pointer;color:#8B95A1;border-right-width:0} .hideBtn:first-child{border-radius:6px 0 0 6px} .hideBtn:last-child{border-radius:0 6px 6px 0;border-right-width:1px} .hideBtn:hover{background:#FFF4CE;color:#B45309;border-color:#F5C878;position:relative;z-index:1}
+
+#midBar{display:none;padding:10px 20px;background:var(--bg);border-bottom:1px solid var(--line);gap:8px;align-items:center;flex-wrap:wrap}
+#midBar.show{display:flex}
+#midBar input, #midBar select{height:32px;border:1px solid var(--line);border-radius:10px;padding:0 10px;font-size:12.5px;background:#fff}
+.rgSido{color:#5F6368;transition:color .15s}
+.rgSido:hover{color:var(--ink);text-decoration:underline}
+.rgProp{cursor:pointer}
+.sidoResetBtn{height:34px;border:1px solid var(--line);border-radius:10px;background:#fff;color:#5F6368;padding:0 14px;font-size:12.5px;cursor:pointer;font-weight:500;flex-shrink:0;white-space:nowrap}
+.sidoResetBtn:hover{background:var(--bg);color:var(--ink);border-color:var(--ink)}
+#homeTitle{cursor:pointer}
+
+.feedItem{transition:opacity .2s}
+
+/* feed - 스크롤 원천 차단 + 우측 여백 제거 */
+
+
+
+
+
+
+
+.feedItem.hiddenFB{display:none !important}
+
+
+
+.masonryGrid{display:none}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#bottomFeed{background:var(--bg);border-top:1px solid var(--line);padding:0 0 40px}
+.bottomFeedInner{max-width:1100px;margin:0 auto;padding:16px}
+.masonry2{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}
+@media(max-width:768px){.masonry2{grid-template-columns:1fr}}
+.memberCard{display:flex;flex-direction:column;width:100%;height:700px;margin:0 0 16px;background:#fff;border:1px solid var(--line);border-radius:14px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.06);transition:opacity .2s}
+.memberCard.hiddenEmpty{display:none !important}
+.memberCardHead{flex:0 0 auto;padding:10px 14px;display:flex;justify-content:space-between;align-items:center;background:#fff;border-bottom:1px solid var(--line);font-weight:700;font-size:13px}
+/* 좁은 화면: 카드 헤더 "한 달" 버튼 숨김(오터치 방지) */
+@media(max-width:640px){
+  .memberCardHead .hideBtnGroup .hideBtn:nth-child(3){display:none}
+}
+.memberCardBody{flex:1;min-height:0;width:100%;overflow:hidden;background:#fff;position:relative}
+.mcbFallback{position:absolute;inset:0;z-index:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:22px;text-align:center;background:#fff;color:#9AA0A6;font-size:12px}
+.mcbFail{font-size:12.5px;color:#6B7280;line-height:1.5}
+.memberCardBody .fb-page{position:relative;z-index:1}
+.memberCardBody .fb-page, .memberCardBody .fb-page span, .memberCardBody .fb-page iframe{width:100% !important;max-width:100% !important}
+/* FB 페이지 플러그인 자체 헤더(프로필 사진·팔로우 버튼·팔로워수·좋아요바)를 잘라내고
+   첫 게시물의 헤더(이름·N시간 전·f 로고)부터 보이게. FB 임베드라 로컬 확인 불가 —
+   첫 게시물 이름이 잘리면 margin-top 절대값을 줄이고, 플러그인 헤더가 보이면 늘린다. */
+.memberCardBody .fb-page iframe{margin-top:-90px !important;height:1000px !important}
+/* iframe 자체가 안 생긴 = 확실한 실패 → 카드를 안내 높이로 축소 */
+.memberCard.mcbFailed{height:auto}
+.memberCard.mcbFailed .memberCardBody{flex:0 0 auto;overflow:visible}
+.memberCard.mcbFailed .mcbFallback{position:static;padding:20px 16px}
+.memberCardFoot{padding:8px 12px;display:flex;justify-content:flex-end;align-items:center;border-top:1px solid var(--line);background:#FAFBFB;font-size:12px}
+.memberCardFoot a{color:#1877F2;text-decoration:none;font-weight:600}
+.memberCardFoot a:hover{text-decoration:underline}
+/* 개인 계정 카드 — Page Plugin 임베드 불가. 안내 + 방문 버튼 + 최신 글 텍스트. 높이 auto. */
+.memberCard.profileCard{height:auto}
+.profileCardBody{padding:16px 16px 14px;display:flex;flex-direction:column;gap:12px;background:#fff}
+.profileNotice{font-size:12.5px;color:#6B7280;line-height:1.6;background:#F8F9FA;border:1px solid var(--line);border-radius:10px;padding:11px 13px}
+.profileVisitBtn{align-self:flex-start;text-decoration:none;font-size:12.5px;font-weight:700;color:#fff;background:#1877F2;border:none;border-radius:9px;padding:9px 16px;cursor:pointer}
+.profileVisitBtn:hover{background:#166fe0}
+.profilePosts{display:flex;flex-direction:column;gap:9px}
+.profilePosts .ppLoading,.profilePosts .ppNote{font-size:12px;color:#9AA0A6;padding:2px 0}
+.profilePost{font-size:12.5px;color:#202124;line-height:1.65;white-space:pre-wrap;word-break:break-word;border-left:2px solid #E4E6EB;padding:2px 0 2px 11px}
+.profilePost + .profilePost{border-top:1px dashed #EDEFF2;padding-top:9px}
+.profilePostsHead{font-size:11.5px;font-weight:700;color:#8B95A1;letter-spacing:.02em}
+
+
+/* 뒤집어도 페북 로고 안뜸 수정 + 빈카드 숨김 */
+.cardFront .sns{position:relative;z-index:4}
+.cardFront .sns a{backface-visibility:hidden;-webkit-backface-visibility:hidden}
+.memberCard.hiddenEmpty{display:none !important}
+.cardBack .backName{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+
+
+/* V3 - 뒤집기 로고 강제 표시 */
+.flipInner{transform-style:preserve-3d !important}
+.cardFront, .cardBack{backface-visibility:hidden !important; -webkit-backface-visibility:hidden !important}
+.cardFront .sns{position:relative !important; z-index:10 !important; transform:translateZ(1px)}
+.cardFront .sns a.fb{opacity:1 !important; visibility:visible !important; display:flex !important}
+.cardFront .sns a.fb svg{opacity:1 !important}
+
+
+/* V4 - 뒤집기 로고 원천 보장 */
+.flip .cardFront .sns a.fb{display:flex !important; opacity:1 !important; visibility:visible !important}
+.flip.flipped .cardFront .sns{opacity:0 !important}
+.cardBack .backName .fbBackIcon{display:inline-flex !important}
+
+
+/* 복사한 링크로 바로 스크랩 — 하단 확인 바 */
+</style>
+</head>
+<body>
+
+<div id="fb-root"></div>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+<script>
+const firebaseConfig = {
+  apiKey: "YOUR_FIREBASE_API_KEY",
+  authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+  projectId: "YOUR_PROJECT_ID",
+  storageBucket: "YOUR_PROJECT_ID.firebasestorage.app",
+  messagingSenderId: "YOUR_SENDER_ID",
+  appId: "YOUR_APP_ID"
+};
+let db=null; let firestoreStatus='connected'; let lastChangedRows=new Set(); let saveDebounceTimer=null; let _userManuallyCleared=false;
+try{ firebase.initializeApp(firebaseConfig); db=firebase.firestore(); }catch(e){ console.warn(e); }
+// Firestore 규칙: 로그인 + sns_allow/{uid} 명단에 있어야 읽기·쓰기 가능(2026-09-29).
+// 정글 본체와 같은 origin이라 본체의 구글 로그인 세션을 그대로 이어받는다. 로그인 안 돼 있으면 DB 미사용.
+let snsAuthBlocked=false;
+const authReady = new Promise(res=>{
+  if(!db){ res(null); return; }
+  try{
+    const off=firebase.auth().onAuthStateChanged(u=>{ off(); if(!u){ db=null; snsAuthBlocked=true; } res(u); });
+  }catch(e){ console.warn(e); res(null); }
+});
+// 계정별 데이터 분리: 메인 앱(app.js)이 localStorage에 심어준 uid로 Firestore 경로를 네임스페이스.
+// uid 없으면(비로그인·구세션) 'shared' = 기존 팀 공유 컬렉션 그대로 사용(하위호환).
+let SNS_NS = 'shared';
+try{ SNS_NS = localStorage.getItem('jungle_sns_client') || 'shared'; }catch(e){}
+function politiciansCol(){
+  return SNS_NS==='shared' ? db.collection('politicians')
+                            : db.collection('sns_u').doc(SNS_NS).collection('politicians');
+}
+// 객관 정보(페이스북·X·위키·사진·상임위 등)는 모든 고객사가 함께 쓰는 공유 컬렉션.
+// 한 곳(예: sunnydesk)에서 고치면 root/politicians 에 저장 → 다른 고객사도 다음 동기화에 반영.
+// 주관 정보(계파 태그·티어·메모·피드 숨김)만 sns_u/{고객사}/politicians 에 고객사별로 남는다.
+const SHARED_FIELDS = ['fb','x','wiki','ph'];
+function sharedPoliticiansCol(){ return db.collection('politicians'); }
+
+// 일회성: 분리 이전에 각 고객사 칸에만 있던 FB/X/위키/사진을 공유 컬렉션으로 승격.
+// sunnydesk를 원본으로 삼는다.
+async function migrateSharedFieldsOnce(){
+  if(SNS_NS!=='sunnydesk' || !db) return;
+  const flagRef = db.collection('sns_u').doc(SNS_NS);
+  try{
+    const flag = await flagRef.get();
+    if(flag.exists && flag.data() && flag.data()._sharedFieldsMigrated) return;
+    const cli = await db.collection('sns_u').doc(SNS_NS).collection('politicians').get();
+    let batch = db.batch(), n = 0;
+    for(const d of cli.docs){
+      const s = d.data(), out = {};
+      SHARED_FIELDS.forEach(f=>{ if(s[f]!==undefined && s[f]!=='') out[f]=s[f]; });
+      if(!Object.keys(out).length) continue;
+      out.name = s.name || d.id; out.id = d.id;
+      out.updatedAt = firebase.firestore.FieldValue.serverTimestamp();
+      batch.set(sharedPoliticiansCol().doc(d.id), out, {merge:true});
+      if(++n % 400 === 0){ await batch.commit(); batch = db.batch(); n = 0; }
+    }
+    if(n) await batch.commit();
+    await flagRef.set({_sharedFieldsMigrated:true, _sharedFieldsMigratedAt:firebase.firestore.FieldValue.serverTimestamp()}, {merge:true});
+    console.log('[shared migrate] sunnydesk의 FB/X/위키/사진 → 공유 politicians 반영 완료');
+  }catch(e){ console.warn('[shared migrate] 실패(계속 진행)', e); }
+}
+// 계정 첫 진입 시 팀 공유 데이터(politicians)를 이 계정 칸으로 1회 복사(시드).
+async function seedSnsIfNeeded(){
+  if(SNS_NS==='shared' || !db) return;
+  const flagRef = db.collection('sns_u').doc(SNS_NS);
+  try{
+    const flag = await flagRef.get();
+    if(flag.exists && flag.data() && flag.data()._seeded) return;
+    const shared = await db.collection('politicians').get();
+    let batch = db.batch(), n = 0, committed = 0;
+    for(const d of shared.docs){
+      // 주관 정보(계파·티어·메모)만 고객사 칸으로 시드. 객관 정보(FB·X·위키·사진)는 공유 컬렉션에서 직접 읽는다.
+      const s = d.data();
+      batch.set(politiciansCol().doc(d.id), {
+        factions: s.factions!==undefined ? s.factions : (s.fac||[]),
+        tier: s.tier||'', memo: s.memo||'',
+        name: s.name||d.id, id: d.id
+      }, {merge:true});
+      if(++n % 400 === 0){ await batch.commit(); committed += n; batch = db.batch(); n = 0; }
+    }
+    if(n) await batch.commit();
+    await flagRef.set({_seeded:true, _seededAt:firebase.firestore.FieldValue.serverTimestamp()}, {merge:true});
+    console.log('[SNS seed] 팀 공유 '+shared.size+'건 → 계정 칸 복사 완료');
+  }catch(e){ console.warn('[SNS seed] 실패(계속 진행)', e); }
+}
+</script>
+<script async defer crossorigin="anonymous" src="https://connect.facebook.net/ko_KR/sdk.js#xfbml=1&version=v19.0"></script>
+
+<!-- 검색·백업은 이제 부모 프레임(people.html)의 국회의원/일반인 탭 줄에서 조작함(공간 절약).
+     이 안의 컨트롤들은 화면에는 안 보이지만 그대로 남겨서 부모가 getElementById로 값 설정 후 click()을 호출한다. -->
+<div class="header" style="display:none"><h1 id="homeTitle" title="홈으로">국회의원</h1><span class="count" id="totalCount"></span><div style="display:flex;gap:6px;align-items:center;flex:1;min-width:260px;max-width:440px"><div style="position:relative;flex:1;display:flex;align-items:center;min-width:200px;max-width:380px">
+<input id="q" placeholder="이름, 지역구, 상임위, 계파, 메모 검색" style="flex:1;width:100%;height:38px;border:1px solid var(--line);border-radius:19px;padding:0 36px 0 16px;font-size:13px;outline:none;background:var(--bg)">
+<button id="qClear" title="지우기" style="position:absolute;right:6px;top:50%;transform:translateY(-50%);width:24px;height:24px;border-radius:50%;border:0;background:#E8EAED;color:#5F6368;cursor:pointer;display:none;align-items:center;justify-content:center;font-size:14px">×</button>
+</div><button class="btn primary" id="searchBtn" style="height:38px">검색</button></div><button class="btn" id="selMode" style="display:none">선택모드</button><button class="btn" id="backupBtn" title="현재 태그/티어/메모를 JSON으로 저장">💾 백업</button></div>
+<div id="fsStatusBar" style="padding:6px 20px 0;"><span id="fsStatus" hidden style="font-size:11px;color:#5F6368;border:1px solid #E8EAED;padding:4px 10px;border-radius:12px;background:#F8F9FA;"></span></div>
+<div class="filters"><div class="fRow"><svg class="fIco" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" style="fill:none" title="정당"><path stroke-linecap="round" stroke-linejoin="round" d="M3 3v1.5M3 21v-6m0 0 2.77-.693a9 9 0 0 1 6.208.682l.108.054a9 9 0 0 0 6.086.71l3.114-.732a48.524 48.524 0 0 1-.005-10.499l-3.11.732a9 9 0 0 1-6.085-.711l-.108-.054a9 9 0 0 0-6.208-.682L3 4.5M3 15V4.5"/></svg><div id="fParty" style="display:flex;gap:6px;flex-wrap:wrap"></div></div><div class="fRow"><svg class="fIco" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" style="fill:none" title="태그"><path stroke-linecap="round" stroke-linejoin="round" d="M9.568 3H5.25A2.25 2.25 0 0 0 3 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 0 0 5.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 0 0 9.568 3Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M6 6h.008v.008H6V6Z"/></svg><div id="fFac" style="display:flex;gap:6px;flex-wrap:wrap"></div></div><div class="fRow"><svg class="fIco" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" style="fill:none" title="지역"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z"/></svg><select id="regionSel" class="regSel" style="max-width:110px"><option value="">지역 선택</option></select><div id="regionChips" style="display:flex;gap:6px;flex-wrap:wrap"></div><span class="fDivider"></span><svg class="fIco" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" style="fill:none" title="티어"><path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z"/></svg><div id="fTier" style="display:flex;gap:2px;flex-wrap:wrap"></div></div></div>
+<div id="stat"><span class="statResult">결과 <b id="statCount">0</b>명<span id="filterMsg"></span></span><div id="bulkEdit" style="display:none"></div></div>
+
+<div id="midBar"></div>
+<div id="grid"></div>
+<div id="bottomFeed"><div id="feedList"></div></div>
+<script>
+// 캐시·동기화 메타는 계정별로 분리 — 브라우저를 공유해도 다른 계정 데이터가 안 섞이게
+const LS_KEY = 'sns_clean_v2' + (SNS_NS==='shared' ? '' : '__' + SNS_NS);
+const HIDDEN_POSTS_KEY='hidden_post_ids_v2';
+const PARTY_COLOR={'더불어민주당':'#004EA2','국민의힘':'#E61E2B','조국혁신당':'#0073CF','개혁신당':'#FF7210','진보당':'#D6001C','기본소득당':'#00D2AA','사회민주당':'#F58400','무소속':'#555555'};
+const PARTY_SHORT={'더불어민주당':'민주당','국민의힘':'국힘','조국혁신당':'조국','개혁신당':'개혁','진보당':'진보','기본소득당':'기본소득','사회민주당':'사회민주','무소속':'무소속'};
+const INLINE_MEMBERS=[{"row":1,"nm":"강경숙","p":"조국혁신당","rg":"","comm":"교육위원회","fac":[],"fb":"https://www.facebook.com/grace.kang.165","x":"","tier":"2","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/T2T8225E.jpg","isProp":true,"region":"비례대표"},{"row":2,"nm":"강대식","p":"국민의힘","rg":"동구군위군을","comm":"국방위원회","fac":[],"fb":"https://www.facebook.com/kangds88","x":"","tier":"3","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/L2I9861C.jpg","isProp":false,"region":"대구 동구군위군을"},{"row":3,"nm":"강득구","p":"더불어민주당","rg":"안양시만안구","comm":"국토교통위원회","fac":[],"fb":"https://www.facebook.com/dulipapa2","x":"","tier":"1","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/8P37634C.jpg","isProp":false,"region":"경기 안양시만안구"},{"row":4,"nm":"강명구","p":"국민의힘","rg":"구미시을","comm":"정무위원회","fac":[],"fb":"https://www.facebook.com/0909kmg","x":"","tier":"2","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/9901388T.jpg","isProp":false,"region":"경북 구미시을"},{"row":5,"nm":"강민국","p":"국민의힘","rg":"진주시을","comm":"정무위원회","fac":[],"fb":"https://www.facebook.com/minkukkang","x":"","tier":"3","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/GX22581L.jpg","isProp":false,"region":"경남 진주시을"},{"row":6,"nm":"강선영","p":"국민의힘","rg":"","comm":"국방위원회, 국회운영위원회","fac":[],"fb":"https://www.facebook.com/335kang","x":"","tier":"2","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/NQO7187X.jpg","isProp":true,"region":"비례대표"},{"row":7,"nm":"강선우","p":"무소속","rg":"강서구갑","comm":"농림축산식품해양수산위원회","fac":[],"fb":"https://www.facebook.com/kangsunwooo","x":"https://x.com/gangseonsunwoo","tier":"3","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/MNZ4401T.jpg","isProp":false,"region":"서울 강서구갑"},{"row":8,"nm":"강승규","p":"국민의힘","rg":"홍성군예산군","comm":"","fac":[],"fb":"https://www.facebook.com/kangnara","x":"","tier":"2","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/42K7317Y.jpg","isProp":false,"region":"충남 홍성군예산군"},{"row":9,"nm":"강준현","p":"더불어민주당","rg":"세종 을","comm":"정무위원회","fac":[],"fb":"https://www.facebook.com/junhyeon.gang","x":"","tier":"2","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/5KV96424.jpg","isProp":false,"region":"세종특별자치시을"},{"row":10,"nm":"고동진","p":"국민의힘","rg":"강남구병","comm":"행정안전위원회","fac":[],"fb":"https://www.facebook.com/dj.koh7163","x":"","tier":"2","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/HS39431V.jpg","isProp":false,"region":"서울 강남구병"},{"row":11,"nm":"고민정","p":"더불어민주당","rg":"광진구을","comm":"교육위원회","fac":[],"fb":"https://www.facebook.com/minjung.ko.184","x":"","tier":"1","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/WCD5518S.jpg","isProp":false,"region":"서울 광진구을"},{"row":12,"nm":"곽규택","p":"국민의힘","rg":"서구동구","comm":"국회운영위원회, 법제사법위원회","fac":[],"fb":"https://www.facebook.com/busankkt","x":"","tier":"1","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/REG96285.jpg","isProp":false,"region":"부산 서구동구"},{"row":13,"nm":"곽상언","p":"더불어민주당","rg":"종로구","comm":"기후에너지환경노동위원회, 성평등가족위원회","fac":[],"fb":"https://www.facebook.com/kwaksangeon","x":"https://x.com/kwaksangeon","tier":"1","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/FIE6569O.jpg","isProp":false,"region":"서울 종로구"},{"row":14,"nm":"구자근","p":"국민의힘","rg":"구미시갑","comm":"","fac":[],"fb":"https://www.facebook.com/can929292","x":"","tier":"2","memo":"위원회 없음","ph":"https://www.assembly.go.kr/static/portal/img/openassm/7469929V.jpg","isProp":false,"region":"경북 구미시갑"},{"row":15,"nm":"권성동","p":"국민의힘","rg":"강릉시","comm":"","fac":[],"fb":"https://www.facebook.com/ksdd22","x":"","tier":"2","memo":"SNS주소 확인필요 / 위원회 없음","ph":"https://www.assembly.go.kr/static/portal/img/openassm/GDG1847Z.jpg","isProp":false,"region":"강원 강릉시"},{"row":16,"nm":"권영세","p":"국민의힘","rg":"용산구","comm":"재정경제기획위원회","fac":[],"fb":"https://www.facebook.com/yskwon21","x":"","tier":"1","memo":"SNS주소 확인필요","ph":"https://www.assembly.go.kr/static/portal/img/openassm/LG63087O.jpg","isProp":false,"region":"서울 용산구"},{"row":17,"nm":"권영진","p":"국민의힘","rg":"달서구병","comm":"","fac":[],"fb":"https://www.facebook.com/KwonYoungJin1210","x":"","tier":"2","memo":"위원회 없음","ph":"https://www.assembly.go.kr/static/portal/img/openassm/LYY5513O.jpg","isProp":false,"region":"대구 달서구병"},{"row":18,"nm":"권칠승","p":"더불어민주당","rg":"화성시병","comm":"보건복지위원회","fac":[],"fb":"https://www.facebook.com/k7win","x":"","tier":"2","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/C7E79345.jpg","isProp":false,"region":"경기 화성시병"},{"row":19,"nm":"권향엽","p":"더불어민주당","rg":"순천시광양시곡성군구례군을","comm":"산업통상자원중소벤처기업위원회","fac":[],"fb":"https://www.facebook.com/khy2955","x":"","tier":"2","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/EFU76868.jpg","isProp":false,"region":"전남 순천시광양시곡성군구례군을"},{"row":20,"nm":"김건","p":"국민의힘","rg":"","comm":"","fac":[],"fb":"https://www.facebook.com/profile.php?id=61560259481788","x":"","tier":"2","memo":"위원회 없음","ph":"https://www.assembly.go.kr/static/portal/img/openassm/TQP7167T.jpg","isProp":true,"region":"비례대표"},{"row":21,"nm":"김교흥","p":"더불어민주당","rg":"서구갑","comm":"보건복지위원회","fac":[],"fb":"https://www.facebook.com/kimkyoheung","x":"","tier":"2","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/X1K3667J.jpg","isProp":false,"region":"인천 서구갑"},{"row":22,"nm":"김기웅","p":"국민의힘","rg":"중구남구","comm":"","fac":[],"fb":"https://www.facebook.com/assembly0915","x":"","tier":"3","memo":"SNS주소 확인필요","ph":"https://www.assembly.go.kr/static/portal/img/openassm/HE08888N.jpg","isProp":false,"region":"대구 중구남구"},{"row":23,"nm":"김기표","p":"더불어민주당","rg":"부천시을","comm":"법제사법위원회","fac":[],"fb":"https://www.facebook.com/gipyo.kim.12","x":"","tier":"1","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/3CC88975.jpg","isProp":false,"region":"경기 부천시을"},{"row":24,"nm":"김기현","p":"국민의힘","rg":"남구을","comm":"","fac":[],"fb":"https://www.facebook.com/eutface","x":"","tier":"1","memo":"위원회 없음","ph":"https://www.assembly.go.kr/static/portal/img/openassm/X7I4680R.jpg","isProp":false,"region":"울산 남구을"},{"row":25,"nm":"김남국","p":"더불어민주당","rg":"안산시갑","comm":"과학기술정보방송통신위원회","fac":[],"fb":"https://www.facebook.com/lawmaker2020","x":"https://x.com/lawmaker2024","tier":"2","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/QHL3248U.jpg","isProp":false,"region":"경기 안산시갑"},{"row":26,"nm":"김남근","p":"더불어민주당","rg":"성북구을","comm":"국토교통위원회, 성평등가족위원회","fac":[],"fb":"https://www.facebook.com/gimnamgeun.464850","x":"","tier":"2","memo":"SNS주소 확인필요","ph":"https://www.assembly.go.kr/static/portal/img/openassm/IUX1829H.jpg","isProp":false,"region":"서울 성북구을"},{"row":27,"nm":"김남준","p":"더불어민주당","rg":"계양구을","comm":"재정경제기획위원회","fac":[],"fb":"https://www.facebook.com/njkim4567","x":"https://x.com/njkim4567","tier":"2","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/SKP6181Y.jpg","isProp":false,"region":"인천 계양구을"},{"row":28,"nm":"김남희","p":"더불어민주당","rg":"광명시을","comm":"법제사법위원회","fac":[],"fb":"https://www.facebook.com/namhee.kim.9275","x":"https://x.com/namhee78","tier":"1","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/NXB3178C.jpg","isProp":false,"region":"경기 광명시을"},{"row":29,"nm":"김대식","p":"국민의힘","rg":"사상구","comm":"","fac":[],"fb":"https://www.facebook.com/dswithyou","x":"","tier":"3","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/ANS8383S.jpg","isProp":false,"region":"부산 사상구"},{"row":30,"nm":"김도읍","p":"국민의힘","rg":"강서구","comm":"","fac":[],"fb":"https://www.facebook.com/ldek3525","x":"","tier":"2","memo":"위원회 없음","ph":"https://www.assembly.go.kr/static/portal/img/openassm/LH97552Q.jpg","isProp":false,"region":"부산 강서구"},{"row":31,"nm":"김동아","p":"더불어민주당","rg":"서대문구갑","comm":"법제사법위원회","fac":[],"fb":"https://www.facebook.com/dongahkim1945","x":"","tier":"1","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/MIS62075.jpg","isProp":false,"region":"서울 서대문구갑"},{"row":32,"nm":"김문수","p":"더불어민주당","rg":"순천시광양시곡성군구례군갑","comm":"교육위원회","fac":[],"fb":"https://www.facebook.com/profile.php?id=100001509040808","x":"","tier":"3","memo":"SNS주소 확인필요","ph":"https://www.assembly.go.kr/static/portal/img/openassm/86R9476S.jpg","isProp":false,"region":"전남 순천시광양시곡성군구례군갑"},{"row":33,"nm":"김미애","p":"국민의힘","rg":"해운대구을","comm":"","fac":[],"fb":"https://www.facebook.com/lawyerkimmiae","x":"","tier":"2","memo":"위원회 없음","ph":"https://www.assembly.go.kr/static/portal/img/openassm/3BC6890E.jpg","isProp":false,"region":"부산 해운대구을"},{"row":34,"nm":"김민석","p":"더불어민주당","rg":"영등포구을","comm":"국방위원회","fac":[],"fb":"https://www.facebook.com/minseok.kim.376043","x":"","tier":"1","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/MLH1404S.jpg","isProp":false,"region":"서울 영등포구을"},{"row":35,"nm":"김민전","p":"국민의힘","rg":"","comm":"","fac":[],"fb":"https://www.facebook.com/gimminjeon.2025","x":"","tier":"1","memo":"위원회 없음","ph":"https://www.assembly.go.kr/static/portal/img/openassm/TCP9838Y.jpg","isProp":true,"region":"비례대표"},{"row":36,"nm":"김병기","p":"무소속","rg":"동작구갑","comm":"국방위원회","fac":[],"fb":"https://www.facebook.com/the.kim.weapon","x":"","tier":"3","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/8Q88373R.jpg","isProp":false,"region":"서울 동작구갑"},{"row":37,"nm":"김병주","p":"더불어민주당","rg":"남양주시을","comm":"국방위원회","fac":[],"fb":"https://www.facebook.com/byungjoobyungjoo","x":"","tier":"1","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/GF286398.jpg","isProp":false,"region":"경기 남양주시을"},{"row":38,"nm":"김상훈","p":"국민의힘","rg":"서구","comm":"정무위원회","fac":[],"fb":"https://www.facebook.com/kshdg11","x":"","tier":"2","memo":"티어 미지정","ph":"https://www.assembly.go.kr/static/portal/img/openassm/1Y73132H.jpg","isProp":false,"region":"대구 서구"},{"row":39,"nm":"김석기","p":"국민의힘","rg":"경주시","comm":"","fac":[],"fb":"https://www.facebook.com/podoripapa","x":"","tier":"2","memo":"티어 미지정 / 위원회 없음","ph":"https://www.assembly.go.kr/static/portal/img/openassm/ZYP7962W.jpg","isProp":false,"region":"경북 경주시"},{"row":40,"nm":"김선교","p":"국민의힘","rg":"여주시양평군","comm":"농림축산식품해양수산위원회","fac":[],"fb":"","x":"","tier":"2","memo":"티어 미지정 / SNS주소 없음","ph":"https://www.assembly.go.kr/static/portal/img/openassm/JNL7001A.jpg","isProp":false,"region":"경기 여주시양평군"},{"row":41,"nm":"김선민","p":"조국혁신당","rg":"","comm":"과학기술정보방송통신위원회","fac":[],"fb":"https://www.facebook.com/kimsunmin.sarah","x":"","tier":"2","memo":"티어 미지정","ph":"https://www.assembly.go.kr/static/portal/img/openassm/7GW5372Y.jpg","isProp":true,"region":"비례대표"},{"row":42,"nm":"김성범","p":"더불어민주당","rg":"서귀포시","comm":"농림축산식품해양수산위원회","fac":[],"fb":"","x":"","tier":"2","memo":"티어 미지정 / SNS주소 없음","ph":"https://www.assembly.go.kr/static/portal/img/openassm/DOZ1588B.jpg","isProp":false,"region":"제주 서귀포시"},{"row":43,"nm":"김성원","p":"국민의힘","rg":"동두천시양주시연천군을","comm":"","fac":[],"fb":"","x":"","tier":"2","memo":"티어 미지정 / 위원회 없음 / SNS주소 없음","ph":"https://www.assembly.go.kr/static/portal/img/openassm/9D939735.jpg","isProp":false,"region":"경기 동두천시양주시연천군을"},{"row":44,"nm":"김성환","p":"더불어민주당","rg":"노원구을","comm":"재정경제기획위원회","fac":[],"fb":"https://www.facebook.com/no1nowon","x":"https://x.com/no1nowon","tier":"2","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/XSP20229.jpg","isProp":false,"region":"서울 노원구을"},{"row":45,"nm":"김성회","p":"더불어민주당","rg":"고양시갑","comm":"국방위원회, 국회운영위원회","fac":[],"fb":"https://www.facebook.com/sunghoiseankim","x":"","tier":"2","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/88O1334C.jpg","isProp":false,"region":"경기 고양시갑"},{"row":46,"nm":"김소희","p":"국민의힘","rg":"","comm":"기후에너지환경노동위원회","fac":[],"fb":"https://www.facebook.com/soheekim0916","x":"","tier":"2","memo":"티어 미지정","ph":"https://www.assembly.go.kr/static/portal/img/openassm/1SR94244.jpg","isProp":true,"region":"비례대표"},{"row":47,"nm":"김승수","p":"국민의힘","rg":"북구을","comm":"국회운영위원회, 문화체육관광위원회","fac":[],"fb":"https://www.facebook.com/kiminnotank","x":"","tier":"2","memo":"티어 미지정","ph":"https://www.assembly.go.kr/static/portal/img/openassm/5K93695T.jpg","isProp":false,"region":"대구 북구을"},{"row":48,"nm":"김승원","p":"더불어민주당","rg":"수원시갑","comm":"법제사법위원회","fac":[],"fb":"https://www.facebook.com/telgasem","x":"https://x.com/sw_with_suwon","tier":"1","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/ATB59635.jpg","isProp":false,"region":"경기 수원시갑"},{"row":49,"nm":"김영배","p":"더불어민주당","rg":"성북구갑","comm":"행정안전위원회","fac":[],"fb":"https://www.facebook.com/clubyb","x":"","tier":"1","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/B7D7534L.jpg","isProp":false,"region":"서울 성북구갑"},{"row":50,"nm":"김영진","p":"더불어민주당","rg":"수원시병","comm":"행정안전위원회","fac":[],"fb":"","x":"","tier":"1","memo":"SNS주소 없음","ph":"https://www.assembly.go.kr/static/portal/img/openassm/5765663F.jpg","isProp":false,"region":"경기 수원시병"},{"row":51,"nm":"김영호","p":"더불어민주당","rg":"서대문구을","comm":"행정안전위원회","fac":[],"fb":"https://www.facebook.com/stookim","x":"https://x.com/minjoo05","tier":"2","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/7BM2933Y.jpg","isProp":false,"region":"서울 서대문구을"},{"row":52,"nm":"김영환","p":"더불어민주당","rg":"고양시정","comm":"재정경제기획위원회","fac":[],"fb":"","x":"","tier":"2","memo":"SNS주소 없음","ph":"https://www.assembly.go.kr/static/portal/img/openassm/8O34202I.jpg","isProp":false,"region":"경기 고양시정"},{"row":53,"nm":"김예지","p":"국민의힘","rg":"","comm":"","fac":[],"fb":"https://www.facebook.com/pianistyeajikim","x":"","tier":"2","memo":"위원회 없음","ph":"https://www.assembly.go.kr/static/portal/img/openassm/CNZ51556.jpg","isProp":true,"region":"비례대표"},{"row":54,"nm":"김용만","p":"더불어민주당","rg":"하남시을","comm":"정무위원회","fac":[],"fb":"https://www.facebook.com/ymk0814","x":"","tier":"2","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/NB64509Z.jpg","isProp":false,"region":"경기 하남시을"},{"row":55,"nm":"김용민","p":"더불어민주당","rg":"남양주시병","comm":"법제사법위원회","fac":[],"fb":"https://www.facebook.com/fopeople","x":"https://x.com/fopeopler","tier":"1","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/OFE45081.jpg","isProp":false,"region":"경기 남양주시병"},{"row":56,"nm":"김용태","p":"국민의힘","rg":"포천시가평군","comm":"","fac":[],"fb":"","x":"","tier":"1","memo":"SNS주소 없음","ph":"https://www.assembly.go.kr/static/portal/img/openassm/EPI69383.jpg","isProp":false,"region":"경기 포천시가평군"},{"row":57,"nm":"김우영","p":"더불어민주당","rg":"은평구을","comm":"과학기술정보방송통신위원회","fac":[],"fb":"https://www.facebook.com/onlygnlover","x":"","tier":"2","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/3UI95829.jpg","isProp":false,"region":"서울 은평구을"},{"row":58,"nm":"김원이","p":"더불어민주당","rg":"목포시","comm":"산업통상자원중소벤처기업위원회","fac":[],"fb":"https://www.facebook.com/kimwoni8182","x":"","tier":"2","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/4L695580.jpg","isProp":false,"region":"전남 목포시"},{"row":59,"nm":"김위상","p":"국민의힘","rg":"","comm":"기후에너지환경노동위원회","fac":[],"fb":"","x":"","tier":"2","memo":"SNS주소 없음","ph":"https://www.assembly.go.kr/static/portal/img/openassm/LCZ1711I.jpg","isProp":true,"region":"비례대표"},{"row":60,"nm":"김윤","p":"더불어민주당","rg":"","comm":"국회운영위원회, 보건복지위원회","fac":[],"fb":"https://www.facebook.com/profile.php?id=61557384452000","x":"","tier":"2","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/5N65159P.jpg","isProp":true,"region":"비례대표"},{"row":61,"nm":"김윤덕","p":"더불어민주당","rg":"전주시갑","comm":"문화체육관광위원회","fac":[],"fb":"https://www.facebook.com/ydkim22","x":"","tier":"2","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/JZY9937U.jpg","isProp":false,"region":"전북 전주시갑"},{"row":62,"nm":"김은혜","p":"국민의힘","rg":"성남시분당구을","comm":"국회운영위원회","fac":[],"fb":"https://www.facebook.com/eunhye440","x":"","tier":"1","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/L5P27909.jpg","isProp":false,"region":"경기 성남시분당구을"},{"row":63,"nm":"김의겸","p":"더불어민주당","rg":"군산시김제시부안군갑","comm":"산업통상자원중소벤처기업위원회","fac":[],"fb":"https://www.facebook.com/kyummy63","x":"https://x.com/kyummy63","tier":"1","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/FIC9046Z.jpg","isProp":false,"region":"전북 군산시김제시부안군갑"},{"row":64,"nm":"김장겸","p":"국민의힘","rg":"","comm":"과학기술정보방송통신위원회","fac":[],"fb":"","x":"","tier":"2","memo":"SNS주소 없음","ph":"https://www.assembly.go.kr/static/portal/img/openassm/X7E7893P.jpg","isProp":true,"region":"비례대표"},{"row":65,"nm":"김재섭","p":"국민의힘","rg":"도봉구갑","comm":"정무위원회","fac":[],"fb":"https://www.facebook.com/kimjaesub2020","x":"","tier":"1","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/57B28032.jpg","isProp":false,"region":"서울 도봉구갑"},{"row":66,"nm":"김재원","p":"조국혁신당","rg":"","comm":"문화체육관광위원회","fac":[],"fb":"https://www.facebook.com/kimjaewon553","x":"","tier":"2","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/DMP1439I.jpg","isProp":true,"region":"비례대표"},{"row":67,"nm":"김정재","p":"국민의힘","rg":"포항시북구","comm":"","fac":[],"fb":"https://www.facebook.com/lawjj909","x":"","tier":"2","memo":"위원회 없음","ph":"https://www.assembly.go.kr/static/portal/img/openassm/E1J8836Y.jpg","isProp":false,"region":"경북 포항시북구"},{"row":68,"nm":"김정호","p":"더불어민주당","rg":"김해시을","comm":"기후에너지환경노동위원회","fac":[],"fb":"https://www.facebook.com/kimjungho3359","x":"https://x.com/kimjungho3359","tier":"2","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/9LD2641Q.jpg","isProp":false,"region":"경남 김해시을"},{"row":69,"nm":"김종민","p":"무소속","rg":"세종 갑","comm":"산업통상자원중소벤처기업위원회","fac":[],"fb":"https://www.facebook.com/socmind","x":"https://x.com/withmin413","tier":"2","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/M2Q9024I.jpg","isProp":false,"region":"세종특별자치시갑"},{"row":70,"nm":"김종양","p":"국민의힘","rg":"창원시의창구","comm":"","fac":[],"fb":"","x":"","tier":"2","memo":"위원회 없음 / SNS주소 없음","ph":"https://www.assembly.go.kr/static/portal/img/openassm/N378078V.jpg","isProp":false,"region":"경남 창원시의창구"},{"row":71,"nm":"김주영","p":"더불어민주당","rg":"김포시갑","comm":"기후에너지환경노동위원회","fac":[],"fb":"https://www.facebook.com/kimjuyoung60","x":"https://x.com/GimpoLOVE_kjy","tier":"2","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/D6U6678O.jpg","isProp":false,"region":"경기 김포시갑"},{"row":72,"nm":"김준혁","p":"더불어민주당","rg":"수원시정","comm":"교육위원회","fac":[],"fb":"https://www.facebook.com/jhkim1789","x":"https://x.com/kimjunhyuk1789","tier":"2","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/YM42715P.jpg","isProp":false,"region":"경기 수원시정"},{"row":73,"nm":"김준형","p":"조국혁신당","rg":"","comm":"국회운영위원회, 외교통일위원회","fac":[],"fb":"https://www.facebook.com/joonforpeace","x":"","tier":"2","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/8A05621B.jpg","isProp":true,"region":"비례대표"},{"row":74,"nm":"김준환","p":"더불어민주당","rg":"","comm":"외교통일위원회","fac":[],"fb":"https://www.facebook.com/2026kimjh","x":"https://x.com/With_JoonHwan","tier":"2","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/WMT66995.jpg","isProp":true,"region":"비례대표"},{"row":75,"nm":"김태규","p":"국민의힘","rg":"남구갑","comm":"행정안전위원회","fac":[],"fb":"https://www.facebook.com/taekyu.kim.146","x":"","tier":"2","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/7ZS19508.jpg","isProp":false,"region":"울산 남구갑"},{"row":76,"nm":"김태년","p":"더불어민주당","rg":"성남시수정구","comm":"재정경제기획위원회","fac":[],"fb":"https://www.facebook.com/ktn.official","x":"https://x.com/kimtaenyeon","tier":"2","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/1WE5693J.jpg","isProp":false,"region":"경기 성남시수정구"},{"row":77,"nm":"김태선","p":"더불어민주당","rg":"동구","comm":"기후에너지환경노동위원회","fac":[],"fb":"https://www.facebook.com/taeseon.kim.129","x":"","tier":"2","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/6WK3815W.jpg","isProp":false,"region":"울산 동구"},{"row":78,"nm":"김태호","p":"국민의힘","rg":"양산시을","comm":"","fac":[],"fb":"https://www.facebook.com/taehois","x":"","tier":"2","memo":"위원회 없음","ph":"https://www.assembly.go.kr/static/portal/img/openassm/P0F1530P.jpg","isProp":false,"region":"경남 양산시을"},{"row":79,"nm":"김한규","p":"더불어민주당","rg":"제주시을","comm":"국회운영위원회, 법제사법위원회","fac":[],"fb":"https://www.facebook.com/hanqkim74","x":"","tier":"1","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/NUB4941Z.jpg","isProp":false,"region":"제주 제주시을"},{"row":80,"nm":"김현","p":"더불어민주당","rg":"안산시을","comm":"과학기술정보방송통신위원회","fac":[],"fb":"https://www.facebook.com/cash0610","x":"","tier":"1","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/7YL9580G.jpg","isProp":false,"region":"경기 안산시을"},{"row":81,"nm":"김현정","p":"더불어민주당","rg":"평택시병","comm":"정무위원회","fac":[],"fb":"https://www.facebook.com/https://www.facebook.com/ubuntu202021","x":"","tier":"2","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/6VC83722.jpg","isProp":false,"region":"경기 평택시병"},{"row":82,"nm":"김형동","p":"국민의힘","rg":"안동시예천군","comm":"기후에너지환경노동위원회","fac":[],"fb":"","x":"","tier":"2","memo":"SNS주소 없음","ph":"https://www.assembly.go.kr/static/portal/img/openassm/JEZ3130Q.jpg","isProp":false,"region":"경북 안동시예천군"},{"row":83,"nm":"김희정","p":"국민의힘","rg":"연제구","comm":"","fac":[],"fb":"https://www.facebook.com/https://www.facebook.com/khjkorea1","x":"","tier":"1","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/HRG9655C.jpg","isProp":false,"region":"부산 연제구"},{"row":84,"nm":"나경원","p":"국민의힘","rg":"동작구을","comm":"법제사법위원회","fac":[],"fb":"","x":"","tier":"1","memo":"SNS주소 없음","ph":"https://www.assembly.go.kr/static/portal/img/openassm/SLW27496.jpg","isProp":false,"region":"서울 동작구을"},{"row":85,"nm":"남인순","p":"더불어민주당","rg":"송파구병","comm":"보건복지위원회","fac":[],"fb":"https://www.facebook.com/nisoon","x":"https://x.com/nisoon","tier":"2","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/04T3751T.jpg","isProp":false,"region":"서울 송파구병"},{"row":86,"nm":"노종면","p":"더불어민주당","rg":"부평구갑","comm":"문화체육관광위원회","fac":[],"fb":"https://www.facebook.com/nodolbal","x":"","tier":"1","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/RUZ25800.jpg","isProp":false,"region":"인천 부평구갑"},{"row":87,"nm":"맹성규","p":"더불어민주당","rg":"남동구갑","comm":"외교통일위원회","fac":[],"fb":"https://www.facebook.com/namdong.maeng","x":"https://x.com/congressmaeng","tier":"2","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/FJK3396E.jpg","isProp":false,"region":"인천 남동구갑"},{"row":88,"nm":"모경종","p":"더불어민주당","rg":"서구병","comm":"국토교통위원회","fac":[],"fb":"https://www.facebook.com/people/모경종/100044735180740","x":"https://x.com/MO_alarm","tier":"2","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/J1G57517.jpg","isProp":false,"region":"인천 서구병"},{"row":89,"nm":"문금주","p":"더불어민주당","rg":"고흥군보성군장흥군강진군","comm":"국회운영위원회, 농림축산식품해양수산위원회","fac":[],"fb":"","x":"","tier":"2","memo":"SNS주소 없음","ph":"https://www.assembly.go.kr/static/portal/img/openassm/GRP3908I.jpg","isProp":false,"region":"전남 고흥군보성군장흥군강진군"},{"row":90,"nm":"문대림","p":"더불어민주당","rg":"제주시갑","comm":"농림축산식품해양수산위원회","fac":[],"fb":"","x":"","tier":"2","memo":"SNS주소 없음","ph":"https://www.assembly.go.kr/static/portal/img/openassm/D9I3309M.jpg","isProp":false,"region":"제주 제주시갑"},{"row":91,"nm":"문정복","p":"더불어민주당","rg":"시흥시갑","comm":"국토교통위원회","fac":[],"fb":"","x":"","tier":"1","memo":"SNS주소 없음","ph":"https://www.assembly.go.kr/static/portal/img/openassm/GOC54665.jpg","isProp":false,"region":"경기 시흥시갑"},{"row":92,"nm":"문진석","p":"더불어민주당","rg":"천안시갑","comm":"재정경제기획위원회","fac":[],"fb":"https://www.facebook.com/profile.php?id=100024518042012","x":"","tier":"2","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/4U29186R.jpg","isProp":false,"region":"충남 천안시갑"},{"row":93,"nm":"민병덕","p":"더불어민주당","rg":"안양시동안구갑","comm":"정무위원회","fac":[],"fb":"https://www.facebook.com/anyangmin","x":"https://x.com/anyangmin","tier":"2","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/TZ228122.jpg","isProp":false,"region":"경기 안양시동안구갑"},{"row":94,"nm":"민홍철","p":"더불어민주당","rg":"김해시갑","comm":"국방위원회","fac":[],"fb":"https://www.facebook.com/hongchul.min.1","x":"https://x.com/minstar21c","tier":"2","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/O6D8329R.jpg","isProp":false,"region":"경남 김해시갑"},{"row":95,"nm":"박균택","p":"더불어민주당","rg":"광산구갑","comm":"국회운영위원회, 법제사법위원회","fac":[],"fb":"https://www.facebook.com/parkkyoontaek","x":"","tier":"1","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/IWR8966I.jpg","isProp":false,"region":"광주 광산구갑"},{"row":96,"nm":"박대출","p":"국민의힘","rg":"진주시갑","comm":"재정경제기획위원회","fac":[],"fb":"","x":"https://x.com/dcparkjj","tier":"2","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/W4X85128.jpg","isProp":false,"region":"경남 진주시갑"},{"row":97,"nm":"박덕흠","p":"국민의힘","rg":"보은군옥천군영동군괴산군","comm":"과학기술정보방송통신위원회","fac":[],"fb":"https://www.facebook.com/parkdukhyum","x":"","tier":"2","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/N4R2421C.jpg","isProp":false,"region":"충북 보은군옥천군영동군괴산군"},{"row":98,"nm":"박민규","p":"더불어민주당","rg":"관악구갑","comm":"정무위원회","fac":[],"fb":"https://www.facebook.com/minkyucool","x":"","tier":"2","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/M4O5221T.jpg","isProp":false,"region":"서울 관악구갑"},{"row":99,"nm":"박범계","p":"더불어민주당","rg":"서구을","comm":"교육위원회","fac":[],"fb":"https://www.facebook.com/bkfire","x":"https://x.com/bkfire1004","tier":"1","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/7R156073.jpg","isProp":false,"region":"대전 서구을"},{"row":100,"nm":"박상웅","p":"국민의힘","rg":"밀양시의령군함안군창녕군","comm":"","fac":[],"fb":"","x":"","tier":"2","memo":"위원회 없음 / SNS주소 없음","ph":"https://www.assembly.go.kr/static/portal/img/openassm/VA04150X.jpg","isProp":false,"region":"경남 밀양시의령군함안군창녕군"},{"row":101,"nm":"박상혁","p":"더불어민주당","rg":"김포시을","comm":"정무위원회","fac":[],"fb":"","x":"","tier":"2","memo":"SNS주소 없음","ph":"https://www.assembly.go.kr/static/portal/img/openassm/HXT76735.jpg","isProp":false,"region":"경기 김포시을"},{"row":102,"nm":"박선원","p":"더불어민주당","rg":"부평구을","comm":"국방위원회, 국회운영위원회, 정보위원회","fac":[],"fb":"https://www.facebook.com/parksw63","x":"","tier":"1","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/VZA76236.jpg","isProp":false,"region":"인천 부평구을"},{"row":103,"nm":"박성민","p":"국민의힘","rg":"중구","comm":"","fac":[],"fb":"https://www.facebook.com/usmpark","x":"","tier":"2","memo":"위원회 없음","ph":"https://www.assembly.go.kr/static/portal/img/openassm/X3170462.jpg","isProp":false,"region":"울산 중구"},{"row":104,"nm":"박성준","p":"더불어민주당","rg":"중구성동구을","comm":"외교통일위원회","fac":[],"fb":"https://www.facebook.com/sungjoon.park.37669","x":"","tier":"1","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/IL74008M.jpg","isProp":false,"region":"서울 중구성동구을"},{"row":105,"nm":"박성훈","p":"국민의힘","rg":"북구을","comm":"재정경제기획위원회","fac":[],"fb":"","x":"","tier":"2","memo":"SNS주소 없음","ph":"https://www.assembly.go.kr/static/portal/img/openassm/NX534083.jpg","isProp":false,"region":"부산 북구을"},{"row":106,"nm":"박수민","p":"국민의힘","rg":"강남구을","comm":"국회운영위원회, 행정안전위원회","fac":[],"fb":"https://www.facebook.com/soomin.park.94009","x":"","tier":"2","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/Y0X4618N.jpg","isProp":false,"region":"서울 강남구을"},{"row":107,"nm":"박수영","p":"국민의힘","rg":"남구","comm":"재정경제기획위원회","fac":[],"fb":"https://www.facebook.com/profile.php?id=100087742596788","x":"","tier":"2","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/FU87526G.jpg","isProp":false,"region":"부산 남구"},{"row":108,"nm":"박용갑","p":"더불어민주당","rg":"중구","comm":"보건복지위원회","fac":[],"fb":"","x":"","tier":"2","memo":"SNS주소 없음","ph":"https://www.assembly.go.kr/static/portal/img/openassm/1JI2689F.jpg","isProp":false,"region":"대전 중구"},{"row":109,"nm":"박은정","p":"조국혁신당","rg":"","comm":"법제사법위원회","fac":[],"fb":"https://www.facebook.com/profile.php?id=100062073623168","x":"","tier":"1","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/1A82234K.jpg","isProp":true,"region":"비례대표"},{"row":110,"nm":"박정","p":"더불어민주당","rg":"파주시을","comm":"기후에너지환경노동위원회","fac":[],"fb":"https://www.facebook.com/pjkorea21c","x":"","tier":"2","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/4019850M.jpg","isProp":false,"region":"경기 파주시을"},{"row":111,"nm":"박정하","p":"국민의힘","rg":"원주시갑","comm":"문화체육관광위원회","fac":[],"fb":"","x":"","tier":"2","memo":"SNS주소 없음","ph":"https://www.assembly.go.kr/static/portal/img/openassm/6RD62559.jpg","isProp":false,"region":"강원 원주시갑"},{"row":112,"nm":"박정현","p":"더불어민주당","rg":"대덕구","comm":"국회운영위원회, 외교통일위원회","fac":[],"fb":"","x":"","tier":"2","memo":"SNS주소 없음","ph":"https://www.assembly.go.kr/static/portal/img/openassm/HVV5250J.jpg","isProp":false,"region":"대전 대덕구"},{"row":113,"nm":"박정훈","p":"국민의힘","rg":"송파구갑","comm":"과학기술정보방송통신위원회","fac":[],"fb":"","x":"","tier":"2","memo":"SNS주소 없음","ph":"https://www.assembly.go.kr/static/portal/img/openassm/AEJ19639.jpg","isProp":false,"region":"서울 송파구갑"},{"row":114,"nm":"박주민","p":"더불어민주당","rg":"은평구갑","comm":"행정안전위원회","fac":[],"fb":"https://www.facebook.com/eunpyoung.joomin","x":"https://x.com/yoeman6310","tier":"1","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/6AU2417B.jpg","isProp":false,"region":"서울 은평구갑"},{"row":115,"nm":"박준태","p":"국민의힘","rg":"","comm":"농림축산식품해양수산위원회","fac":[],"fb":"","x":"","tier":"2","memo":"SNS주소 없음","ph":"https://www.assembly.go.kr/static/portal/img/openassm/G6W8250J.jpg","isProp":true,"region":"비례대표"},{"row":116,"nm":"박지원","p":"더불어민주당","rg":"해남군완도군진도군","comm":"법제사법위원회, 정보위원회","fac":[],"fb":"https://www.facebook.com/jwp615","x":"https://x.com/jwp615","tier":"1","memo":"SNS주소 확인필요 / 동명이인","ph":"https://www.assembly.go.kr/static/portal/img/openassm/8BF5855P.jpg","isProp":false,"region":"전남 해남군완도군진도군"},{"row":117,"nm":"박지원","p":"더불어민주당","rg":"군산시김제시부안군을","comm":"보건복지위원회","fac":[],"fb":"","x":"","tier":"2","memo":"SNS주소 확인필요 / 동명이인 / SNS주소 없음","ph":"https://www.assembly.go.kr/static/portal/img/openassm/H7X3372O.jpg","isProp":false,"region":"전북 군산시김제시부안군을"},{"row":118,"nm":"박지혜","p":"더불어민주당","rg":"의정부시갑","comm":"기후에너지환경노동위원회, 성평등가족위원회","fac":[],"fb":"","x":"","tier":"2","memo":"SNS주소 없음","ph":"https://www.assembly.go.kr/static/portal/img/openassm/EMH4976E.jpg","isProp":false,"region":"경기 의정부시갑"},{"row":119,"nm":"박충권","p":"국민의힘","rg":"","comm":"국회운영위원회, 행정안전위원회","fac":[],"fb":"https://www.facebook.com/parkchoongkwon","x":"","tier":"1","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/GP21946O.jpg","isProp":true,"region":"비례대표"},{"row":120,"nm":"박해철","p":"더불어민주당","rg":"안산시병","comm":"기후에너지환경노동위원회","fac":[],"fb":"https://www.facebook.com/newansan0410","x":"","tier":"2","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/E2B3753X.jpg","isProp":false,"region":"경기 안산시병"},{"row":121,"nm":"박형수","p":"국민의힘","rg":"의성군청송군영덕군울진군","comm":"기후에너지환경노동위원회","fac":[],"fb":"https://www.facebook.com/hyeungsoo","x":"","tier":"2","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/6U243644.jpg","isProp":false,"region":"경북 의성군청송군영덕군울진군"},{"row":122,"nm":"박홍근","p":"더불어민주당","rg":"중랑구을","comm":"행정안전위원회","fac":[],"fb":"https://www.facebook.com/maumgil","x":"","tier":"2","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/S824682L.jpg","isProp":false,"region":"서울 중랑구을"},{"row":123,"nm":"박홍배","p":"더불어민주당","rg":"","comm":"정무위원회","fac":[],"fb":"https://www.facebook.com/hongbae.park.1","x":"","tier":"2","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/ZW43496R.jpg","isProp":true,"region":"비례대표"},{"row":124,"nm":"박희승","p":"더불어민주당","rg":"남원시장수군임실군순창군","comm":"산업통상자원중소벤처기업위원회","fac":[],"fb":"https://www.facebook.com/namwonphs","x":"","tier":"2","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/43Q3892U.jpg","isProp":false,"region":"전북 남원시장수군임실군순창군"},{"row":125,"nm":"배준영","p":"국민의힘","rg":"중구강화군옹진군","comm":"","fac":[],"fb":"https://www.facebook.com/jyb116","x":"","tier":"2","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/QQP4727N.jpg","isProp":false,"region":"인천 중구강화군옹진군"},{"row":126,"nm":"배현진","p":"국민의힘","rg":"송파구을","comm":"","fac":[],"fb":"https://www.facebook.com/trustbae83","x":"","tier":"1","memo":"위원회 없음","ph":"https://www.assembly.go.kr/static/portal/img/openassm/4X525582.jpg","isProp":false,"region":"서울 송파구을"},{"row":127,"nm":"백선희","p":"조국혁신당","rg":"","comm":"보건복지위원회","fac":[],"fb":"https://www.facebook.com/61557198895863","x":"","tier":"2","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/YN160848.jpg","isProp":true,"region":"비례대표"},{"row":128,"nm":"백승아","p":"더불어민주당","rg":"","comm":"교육위원회","fac":[],"fb":"https://www.facebook.com/profile.php?id=61555806041839","x":"","tier":"2","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/MDC3257K.jpg","isProp":true,"region":"비례대표"},{"row":129,"nm":"백종헌","p":"국민의힘","rg":"금정구","comm":"","fac":[],"fb":"","x":"","tier":"2","memo":"위원회 없음 / SNS주소 없음","ph":"https://www.assembly.go.kr/static/portal/img/openassm/CAA7713A.jpg","isProp":false,"region":"부산 금정구"},{"row":130,"nm":"백혜련","p":"더불어민주당","rg":"수원시을","comm":"산업통상자원중소벤처기업위원회, 성평등가족위원회, 정보위원회","fac":[],"fb":"https://www.facebook.com/100hyeryun1","x":"","tier":"2","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/HSS7466Y.jpg","isProp":false,"region":"경기 수원시을"},{"row":131,"nm":"복기왕","p":"더불어민주당","rg":"아산시갑","comm":"국토교통위원회","fac":[],"fb":"","x":"","tier":"2","memo":"SNS주소 없음","ph":"https://www.assembly.go.kr/static/portal/img/openassm/GJ56729D.jpg","isProp":false,"region":"충남 아산시갑"},{"row":132,"nm":"부승찬","p":"더불어민주당","rg":"용인시병","comm":"국토교통위원회","fac":[],"fb":"https://www.facebook.com/profile.php?id=100005442004736","x":"","tier":"1","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/6I88973D.jpg","isProp":false,"region":"경기 용인시병"},{"row":133,"nm":"서명옥","p":"국민의힘","rg":"강남구갑","comm":"","fac":[],"fb":"https://www.facebook.com/assembly.ok","x":"","tier":"2","memo":"위원회 없음","ph":"https://www.assembly.go.kr/static/portal/img/openassm/QQ429063.jpg","isProp":false,"region":"서울 강남구갑"},{"row":134,"nm":"서미화","p":"더불어민주당","rg":"","comm":"국회운영위원회, 보건복지위원회","fac":[],"fb":"https://www.facebook.com/m2hwa","x":"","tier":"2","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/51A45980.jpg","isProp":true,"region":"비례대표"},{"row":135,"nm":"서범수","p":"국민의힘","rg":"울주군","comm":"행정안전위원회","fac":[],"fb":"https://www.facebook.com/suhbumsoo","x":"","tier":"1","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/L7J93733.jpg","isProp":false,"region":"울산 울주군"},{"row":136,"nm":"서삼석","p":"더불어민주당","rg":"영암군무안군신안군","comm":"농림축산식품해양수산위원회","fac":[],"fb":"","x":"","tier":"2","memo":"SNS주소 없음","ph":"https://www.assembly.go.kr/static/portal/img/openassm/FOK3459D.jpg","isProp":false,"region":"전남 영암군무안군신안군"},{"row":137,"nm":"서영교","p":"더불어민주당","rg":"중랑구갑","comm":"법제사법위원회","fac":[],"fb":"https://www.facebook.com/seoyoungkyos","x":"https://x.com/Seoyoungkyo","tier":"1","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/TKJ4800F.jpg","isProp":false,"region":"서울 중랑구갑"},{"row":138,"nm":"서영석","p":"더불어민주당","rg":"부천시갑","comm":"보건복지위원회","fac":[],"fb":"https://www.facebook.com/ojungvitamin","x":"","tier":"2","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/XR24352K.jpg","isProp":false,"region":"경기 부천시갑"},{"row":139,"nm":"서왕진","p":"조국혁신당","rg":"","comm":"기후에너지환경노동위원회","fac":[],"fb":"https://www.facebook.com/wangjin.seo","x":"","tier":"2","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/80C5885Z.jpg","isProp":true,"region":"비례대표"},{"row":140,"nm":"서일준","p":"국민의힘","rg":"거제시","comm":"","fac":[],"fb":"https://www.facebook.com/greatgeoje","x":"","tier":"2","memo":"위원회 없음","ph":"https://www.assembly.go.kr/static/portal/img/openassm/MR210505.jpg","isProp":false,"region":"경남 거제시"},{"row":141,"nm":"서지영","p":"국민의힘","rg":"동래구","comm":"국회운영위원회","fac":[],"fb":"https://www.facebook.com/jee21dongnae","x":"","tier":"1","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/P7U7800Z.jpg","isProp":false,"region":"부산 동래구"},{"row":142,"nm":"서천호","p":"국민의힘","rg":"사천시남해군하동군","comm":"농림축산식품해양수산위원회","fac":[],"fb":"https://www.facebook.com/https://www.facebook.com/suhcheonho","x":"","tier":"2","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/JP222486.jpg","isProp":false,"region":"경남 사천시남해군하동군"},{"row":143,"nm":"성일종","p":"국민의힘","rg":"서산시태안군","comm":"국방위원회","fac":[],"fb":"https://www.facebook.com/sij5140","x":"","tier":"1","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/7XY7109I.jpg","isProp":false,"region":"충남 서산시태안군"},{"row":144,"nm":"소병훈","p":"더불어민주당","rg":"광주시갑","comm":"보건복지위원회","fac":[],"fb":"https://www.facebook.com/sotongsa1","x":"","tier":"2","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/ZDR63255.jpg","isProp":false,"region":"경기 광주시갑"},{"row":145,"nm":"손명수","p":"더불어민주당","rg":"용인시을","comm":"정무위원회","fac":[],"fb":"","x":"","tier":"2","memo":"SNS주소 없음","ph":"https://www.assembly.go.kr/static/portal/img/openassm/JSA8739I.jpg","isProp":false,"region":"경기 용인시을"},{"row":146,"nm":"손솔","p":"진보당","rg":"","comm":"법제사법위원회","fac":[],"fb":"https://www.facebook.com/sonsol24","x":"https://x.com/sonsol_jinbo","tier":"2","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/2KM3589W.jpg","isProp":true,"region":"비례대표"},{"row":147,"nm":"송기헌","p":"더불어민주당","rg":"원주시을","comm":"과학기술정보방송통신위원회","fac":[],"fb":"https://www.facebook.com/withsong","x":"","tier":"2","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/SQ36001H.jpg","isProp":false,"region":"강원 원주시을"},{"row":148,"nm":"송석준","p":"국민의힘","rg":"이천시","comm":"법제사법위원회","fac":[],"fb":"https://www.facebook.com/icheonsarang","x":"","tier":"1","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/CNW5754J.jpg","isProp":false,"region":"경기 이천시"},{"row":149,"nm":"송언석","p":"국민의힘","rg":"김천시","comm":"","fac":[],"fb":"","x":"","tier":"1","memo":"SNS주소 없음","ph":"https://www.assembly.go.kr/static/portal/img/openassm/6EN68926.jpg","isProp":false,"region":"경북 김천시"},{"row":150,"nm":"송영길","p":"더불어민주당","rg":"연수구갑","comm":"국방위원회","fac":[],"fb":"","x":"","tier":"1","memo":"SNS주소 없음","ph":"https://www.assembly.go.kr/static/portal/img/openassm/PAO22428.jpg","isProp":false,"region":"인천 연수구갑"},{"row":151,"nm":"송옥주","p":"더불어민주당","rg":"화성시갑","comm":"농림축산식품해양수산위원회","fac":[],"fb":"https://www.facebook.com/okju.song.52","x":"","tier":"2","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/3249208I.jpg","isProp":false,"region":"경기 화성시갑"},{"row":152,"nm":"송재봉","p":"더불어민주당","rg":"청주시청원구","comm":"산업통상자원중소벤처기업위원회","fac":[],"fb":"","x":"","tier":"2","memo":"SNS주소 없음","ph":"https://www.assembly.go.kr/static/portal/img/openassm/RG972910.jpg","isProp":false,"region":"충북 청주시청원구"},{"row":153,"nm":"신동욱","p":"국민의힘","rg":"서초구을","comm":"법제사법위원회","fac":[],"fb":"","x":"","tier":"1","memo":"SNS주소 없음","ph":"https://www.assembly.go.kr/static/portal/img/openassm/OWD1018N.jpg","isProp":false,"region":"서울 서초구을"},{"row":154,"nm":"신성범","p":"국민의힘","rg":"산청군함양군거창군합천군","comm":"과학기술정보방송통신위원회","fac":[],"fb":"","x":"","tier":"2","memo":"SNS주소 없음","ph":"https://www.assembly.go.kr/static/portal/img/openassm/RMC1840P.jpg","isProp":false,"region":"경남 산청군함양군거창군합천군"},{"row":155,"nm":"신장식","p":"조국혁신당","rg":"","comm":"농림축산식품해양수산위원회","fac":[],"fb":"https://www.facebook.com/jangsik.shin","x":"","tier":"1","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/NPD75153.jpg","isProp":true,"region":"비례대표"},{"row":156,"nm":"신정훈","p":"더불어민주당","rg":"나주시화순군","comm":"재정경제기획위원회","fac":[],"fb":"https://www.facebook.com/newnaju21","x":"","tier":"1","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/M7O7878U.jpg","isProp":false,"region":"전남 나주시화순군"},{"row":157,"nm":"안규백","p":"더불어민주당","rg":"동대문구갑","comm":"교육위원회","fac":[],"fb":"https://www.facebook.com/agbhope","x":"","tier":"1","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/TST4507I.jpg","isProp":false,"region":"서울 동대문구갑"},{"row":158,"nm":"안도걸","p":"더불어민주당","rg":"동구남구을","comm":"국회운영위원회, 재정경제기획위원회","fac":[],"fb":"https://www.facebook.com/ahndogeol","x":"","tier":"2","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/EB16073M.jpg","isProp":false,"region":"광주 동구남구을"},{"row":159,"nm":"안상훈","p":"국민의힘","rg":"","comm":"","fac":[],"fb":"","x":"","tier":"2","memo":"SNS주소 없음","ph":"https://www.assembly.go.kr/static/portal/img/openassm/PYA8594I.jpg","isProp":true,"region":"비례대표"},{"row":160,"nm":"안철수","p":"국민의힘","rg":"성남시분당구갑","comm":"","fac":[],"fb":"https://www.facebook.com/ahncs111","x":"https://x.com/cheolsoo0919","tier":"1","memo":"위원회 없음","ph":"https://www.assembly.go.kr/static/portal/img/openassm/YOG1280B.jpg","isProp":false,"region":"경기 성남시분당구갑"},{"row":161,"nm":"안태준","p":"더불어민주당","rg":"광주시을","comm":"국토교통위원회","fac":[],"fb":"https://www.facebook.com/antagt","x":"","tier":"1","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/W8L9421K.jpg","isProp":false,"region":"경기 광주시을"},{"row":162,"nm":"안호영","p":"더불어민주당","rg":"완주군진안군무주군","comm":"기후에너지환경노동위원회","fac":[],"fb":"https://www.facebook.com/ahnho065","x":"","tier":"2","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/XEF29171.jpg","isProp":false,"region":"전북 완주군진안군무주군"},{"row":163,"nm":"양부남","p":"더불어민주당","rg":"서구을","comm":"행정안전위원회","fac":[],"fb":"https://www.facebook.com/yangbunam","x":"","tier":"1","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/CK143054.jpg","isProp":false,"region":"광주 서구을"},{"row":164,"nm":"어기구","p":"더불어민주당","rg":"당진시","comm":"재정경제기획위원회","fac":[],"fb":"https://www.facebook.com/ekkw2012","x":"","tier":"2","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/8FB1535Y.jpg","isProp":false,"region":"충남 당진시"},{"row":165,"nm":"엄태영","p":"국민의힘","rg":"제천시단양군","comm":"","fac":[],"fb":"","x":"","tier":"2","memo":"위원회 없음 / SNS주소 없음","ph":"https://www.assembly.go.kr/static/portal/img/openassm/8348421R.jpg","isProp":false,"region":"충북 제천시단양군"},{"row":166,"nm":"염태영","p":"더불어민주당","rg":"수원시무","comm":"국토교통위원회","fac":[],"fb":"https://www.facebook.com/suwon.mayor","x":"https://x.com/all4thepeople21","tier":"2","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/URX8075K.jpg","isProp":false,"region":"경기 수원시무"},{"row":167,"nm":"오기형","p":"더불어민주당","rg":"도봉구을","comm":"재정경제기획위원회","fac":[],"fb":"https://www.facebook.com/01050900177","x":"https://x.com/vic_ohgh(01049961986)","tier":"2","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/OIA3741M.jpg","isProp":false,"region":"서울 도봉구을"},{"row":168,"nm":"오세희","p":"더불어민주당","rg":"","comm":"산업통상자원중소벤처기업위원회","fac":[],"fb":"https://www.facebook.com/https://www.facebook.com/profile.php?id=6155992840","x":"","tier":"2","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/BRU2690F.jpg","isProp":true,"region":"비례대표"},{"row":169,"nm":"용혜인","p":"기본소득당","rg":"","comm":"행정안전위원회","fac":[],"fb":"https://www.facebook.com/YONGHYEIN.BASICINCOME","x":"https://x.com/yong_hyein","tier":"1","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/GE71932C.jpg","isProp":true,"region":"비례대표"},{"row":170,"nm":"우원식","p":"더불어민주당","rg":"노원구갑","comm":"외교통일위원회","fac":[],"fb":"https://www.facebook.com/wonsikw","x":"https://x.com/wonsikw","tier":"1","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/XBT9550Q.jpg","isProp":false,"region":"서울 노원구갑"},{"row":171,"nm":"우재준","p":"국민의힘","rg":"북구갑","comm":"행정안전위원회","fac":[],"fb":"https://www.facebook.com/profile.php?id=61556139997514","x":"","tier":"1","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/8UC4779G.jpg","isProp":false,"region":"대구 북구갑"},{"row":172,"nm":"유동수","p":"더불어민주당","rg":"계양구갑","comm":"정무위원회","fac":[],"fb":"https://www.facebook.com/newds2016","x":"","tier":"2","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/GX38539O.jpg","isProp":false,"region":"인천 계양구갑"},{"row":173,"nm":"유상범","p":"국민의힘","rg":"홍천군횡성군영월군평창군","comm":"재정경제기획위원회","fac":[],"fb":"https://www.facebook.com/sbyoo64","x":"","tier":"2","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/MU69217P.jpg","isProp":false,"region":"강원 홍천군횡성군영월군평창군"},{"row":174,"nm":"유영하","p":"국민의힘","rg":"달서구갑","comm":"정무위원회","fac":[],"fb":"https://www.facebook.com/YooYeongha","x":"","tier":"2","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/JZV5283U.jpg","isProp":false,"region":"대구 달서구갑"},{"row":175,"nm":"유용원","p":"국민의힘","rg":"","comm":"국방위원회","fac":[],"fb":"https://www.facebook.com/facebook.com/bemilM","x":"","tier":"2","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/KBK8836C.jpg","isProp":true,"region":"비례대표"},{"row":176,"nm":"유의동","p":"국민의힘","rg":"평택시을","comm":"정무위원회","fac":[],"fb":"https://www.facebook.com/ptopen730","x":"","tier":"2","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/MRK4871S.jpg","isProp":false,"region":"경기 평택시을"},{"row":177,"nm":"윤건영","p":"더불어민주당","rg":"구로구을","comm":"정보위원회, 행정안전위원회","fac":[],"fb":"https://www.facebook.com/yky2015","x":"https://x.com/yky2015","tier":"1","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/GP07421U.jpg","isProp":false,"region":"서울 구로구을"},{"row":178,"nm":"윤상현","p":"국민의힘","rg":"동구미추홀구을","comm":"법제사법위원회","fac":[],"fb":"https://www.facebook.com/yoonsanghyun1962","x":"https://x.com/together_ysh","tier":"1","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/MSY7784L.jpg","isProp":false,"region":"인천 동구미추홀구을"},{"row":179,"nm":"윤영석","p":"국민의힘","rg":"양산시갑","comm":"재정경제기획위원회","fac":[],"fb":"","x":"","tier":"2","memo":"SNS주소 없음","ph":"https://www.assembly.go.kr/static/portal/img/openassm/9VR65006.jpg","isProp":false,"region":"경남 양산시갑"},{"row":180,"nm":"윤용근","p":"국민의힘","rg":"공주시부여군청양군","comm":"","fac":[],"fb":"","x":"","tier":"2","memo":"위원회 없음 / SNS주소 없음","ph":"https://www.assembly.go.kr/static/portal/img/openassm/W0154979.jpg","isProp":false,"region":"충남 공주시부여군청양군"},{"row":181,"nm":"윤재옥","p":"국민의힘","rg":"달서구을","comm":"","fac":[],"fb":"https://www.facebook.com/yunjaeok","x":"https://x.com/yunjaeok","tier":"2","memo":"위원회 없음","ph":"https://www.assembly.go.kr/static/portal/img/openassm/ZRF3039U.jpg","isProp":false,"region":"대구 달서구을"},{"row":182,"nm":"윤종군","p":"더불어민주당","rg":"안성시","comm":"국토교통위원회","fac":[],"fb":"","x":"","tier":"2","memo":"SNS주소 없음","ph":"https://www.assembly.go.kr/static/portal/img/openassm/MQK9493H.jpg","isProp":false,"region":"경기 안성시"},{"row":183,"nm":"윤종오","p":"진보당","rg":"북구","comm":"국토교통위원회, 국회운영위원회","fac":[],"fb":"https://www.facebook.com/jongo21","x":"https://x.com/yjongo428","tier":"2","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/3TP65086.jpg","isProp":false,"region":"울산 북구"},{"row":184,"nm":"윤준병","p":"더불어민주당","rg":"정읍시고창군","comm":"농림축산식품해양수산위원회","fac":[],"fb":"https://www.facebook.com/joonbyeong.yoon","x":"","tier":"2","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/JC14718Q.jpg","isProp":false,"region":"전북 정읍시고창군"},{"row":185,"nm":"윤한홍","p":"국민의힘","rg":"창원시마산회원구","comm":"정무위원회","fac":[],"fb":"https://www.facebook.com/uhh609","x":"","tier":"2","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/8X15119P.jpg","isProp":false,"region":"경남 창원시마산회원구"},{"row":186,"nm":"윤호중","p":"더불어민주당","rg":"구리시","comm":"교육위원회","fac":[],"fb":"https://www.facebook.com/hojung.yun","x":"","tier":"2","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/M0A1658U.jpg","isProp":false,"region":"경기 구리시"},{"row":187,"nm":"윤후덕","p":"더불어민주당","rg":"파주시갑","comm":"재정경제기획위원회","fac":[],"fb":"","x":"","tier":"2","memo":"SNS주소 없음","ph":"https://www.assembly.go.kr/static/portal/img/openassm/O7R5461J.jpg","isProp":false,"region":"경기 파주시갑"},{"row":188,"nm":"이강일","p":"더불어민주당","rg":"청주시상당구","comm":"정무위원회","fac":[],"fb":"https://www.facebook.com/leekangil201","x":"","tier":"2","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/AEO5706C.jpg","isProp":false,"region":"충북 청주시상당구"},{"row":189,"nm":"이개호","p":"더불어민주당","rg":"담양군함평군영광군장성군","comm":"농림축산식품해양수산위원회","fac":[],"fb":"https://www.facebook.com/leegaeho","x":"","tier":"2","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/I7R13867.jpg","isProp":false,"region":"전남 담양군함평군영광군장성군"},{"row":190,"nm":"이건태","p":"더불어민주당","rg":"부천시병","comm":"기후에너지환경노동위원회","fac":[],"fb":"https://www.facebook.com/lawyer6624","x":"","tier":"1","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/7YC6702R.jpg","isProp":false,"region":"경기 부천시병"},{"row":191,"nm":"이광재","p":"더불어민주당","rg":"하남시갑","comm":"재정경제기획위원회","fac":[],"fb":"https://www.facebook.com/kwangjae.today","x":"https://x.com/mr_yeskj","tier":"1","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/4A067125.jpg","isProp":false,"region":"경기 하남시갑"},{"row":192,"nm":"이광희","p":"더불어민주당","rg":"청주시서원구","comm":"성평등가족위원회, 행정안전위원회","fac":[],"fb":"https://www.facebook.com/goanghee","x":"","tier":"2","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/95J3282H.jpg","isProp":false,"region":"충북 청주시서원구"},{"row":193,"nm":"이기헌","p":"더불어민주당","rg":"고양시병","comm":"외교통일위원회, 정보위원회","fac":[],"fb":"https://www.facebook.com/kiheon.lee.56","x":"","tier":"2","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/W3U3344O.jpg","isProp":false,"region":"경기 고양시병"},{"row":194,"nm":"이달희","p":"국민의힘","rg":"","comm":"과학기술정보방송통신위원회","fac":[],"fb":"","x":"","tier":"2","memo":"SNS주소 없음","ph":"https://www.assembly.go.kr/static/portal/img/openassm/ROS6754L.jpg","isProp":true,"region":"비례대표"},{"row":195,"nm":"이만희","p":"국민의힘","rg":"영천시청도군","comm":"농림축산식품해양수산위원회","fac":[],"fb":"https://www.facebook.com/yc20002","x":"","tier":"2","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/OSV9142K.jpg","isProp":false,"region":"경북 영천시청도군"},{"row":196,"nm":"이상식","p":"더불어민주당","rg":"용인시갑","comm":"행정안전위원회","fac":[],"fb":"https://www.facebook.com/01common.sense","x":"","tier":"2","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/W8W95421.jpg","isProp":false,"region":"경기 용인시갑"},{"row":197,"nm":"이상휘","p":"국민의힘","rg":"포항시남구울릉군","comm":"과학기술정보방송통신위원회","fac":[],"fb":"https://www.facebook.com/shonlee63","x":"","tier":"2","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/8L52480G.jpg","isProp":false,"region":"경북 포항시남구울릉군"},{"row":198,"nm":"이성권","p":"국민의힘","rg":"사하구갑","comm":"기후에너지환경노동위원회","fac":[],"fb":"https://www.facebook.com/https://www.facebook.com/lsksml","x":"","tier":"2","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/WXJ8352N.jpg","isProp":false,"region":"부산 사하구갑"},{"row":199,"nm":"이성윤","p":"더불어민주당","rg":"전주시을","comm":"법제사법위원회","fac":[],"fb":"https://www.facebook.com/seong.yoon.lee.jeonju","x":"","tier":"1","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/N2P9317N.jpg","isProp":false,"region":"전북 전주시을"},{"row":200,"nm":"이소영","p":"더불어민주당","rg":"의왕시과천시","comm":"기후에너지환경노동위원회","fac":[],"fb":"https://www.facebook.com/imsoyoung.kr","x":"","tier":"2","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/WTR5885Y.jpg","isProp":false,"region":"경기 의왕시과천시"},{"row":201,"nm":"이소희","p":"국민의힘","rg":"","comm":"문화체육관광위원회","fac":[],"fb":"","x":"","tier":"2","memo":"SNS주소 없음","ph":"https://www.assembly.go.kr/static/portal/img/openassm/MRS4949T.jpg","isProp":true,"region":"비례대표"},{"row":202,"nm":"이수진","p":"더불어민주당","rg":"성남시중원구","comm":"보건복지위원회, 성평등가족위원회","fac":[],"fb":"https://www.facebook.com/lsj545","x":"","tier":"2","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/0R68099X.jpg","isProp":false,"region":"경기 성남시중원구"},{"row":203,"nm":"이양수","p":"국민의힘","rg":"속초시인제군고성군양양군","comm":"정무위원회","fac":[],"fb":"https://www.facebook.com/2yangs6288","x":"","tier":"2","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/S9U45255.jpg","isProp":false,"region":"강원 속초시인제군고성군양양군"},{"row":204,"nm":"이언주","p":"더불어민주당","rg":"용인시정","comm":"산업통상자원중소벤처기업위원회","fac":[],"fb":"https://www.facebook.com/leeuj72","x":"","tier":"1","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/JG77046J.jpg","isProp":false,"region":"경기 용인시정"},{"row":205,"nm":"이연희","p":"더불어민주당","rg":"청주시흥덕구","comm":"과학기술정보방송통신위원회, 성평등가족위원회","fac":[],"fb":"","x":"","tier":"2","memo":"SNS주소 없음","ph":"https://www.assembly.go.kr/static/portal/img/openassm/EBH1101V.jpg","isProp":false,"region":"충북 청주시흥덕구"},{"row":206,"nm":"이용선","p":"더불어민주당","rg":"양천구을","comm":"국토교통위원회","fac":[],"fb":"https://www.facebook.com/yslee9282","x":"","tier":"2","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/9JF4562W.jpg","isProp":false,"region":"서울 양천구을"},{"row":207,"nm":"이용우","p":"더불어민주당","rg":"서구을","comm":"기후에너지환경노동위원회","fac":[],"fb":"https://www.facebook.com/lywchosim","x":"","tier":"2","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/6K79158C.jpg","isProp":false,"region":"인천 서구을"},{"row":208,"nm":"이인선","p":"국민의힘","rg":"수성구을","comm":"재정경제기획위원회","fac":[],"fb":"","x":"","tier":"2","memo":"SNS주소 없음","ph":"https://www.assembly.go.kr/static/portal/img/openassm/DWK26447.jpg","isProp":false,"region":"대구 수성구을"},{"row":209,"nm":"이인영","p":"더불어민주당","rg":"구로구갑","comm":"보건복지위원회, 정보위원회","fac":[],"fb":"https://www.facebook.com/bigbang1003","x":"https://x.com/lee_inyoung","tier":"1","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/3ZR4438W.jpg","isProp":false,"region":"서울 구로구갑"},{"row":210,"nm":"이재강","p":"더불어민주당","rg":"의정부시을","comm":"외교통일위원회","fac":[],"fb":"https://www.facebook.com/jaeganglee","x":"","tier":"2","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/3LP22204.jpg","isProp":false,"region":"경기 의정부시을"},{"row":211,"nm":"이재관","p":"더불어민주당","rg":"천안시을","comm":"농림축산식품해양수산위원회","fac":[],"fb":"https://www.facebook.com/people/이재관/pfbid02XjFBeSen5gzFRE4i9sR7hJ9XKvRBdhPm","x":"","tier":"2","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/RKS3658I.jpg","isProp":false,"region":"충남 천안시을"},{"row":212,"nm":"이재정","p":"더불어민주당","rg":"안양시동안구을","comm":"문화체육관광위원회","fac":[],"fb":"https://www.facebook.com/leejjlaw","x":"https://x.com/lovelylawyerjj","tier":"2","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/UQ282145.jpg","isProp":false,"region":"경기 안양시동안구을"},{"row":213,"nm":"이정문","p":"더불어민주당","rg":"천안시병","comm":"문화체육관광위원회","fac":[],"fb":"https://www.facebook.com/jongmun.lee.1","x":"","tier":"2","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/O0I2045I.jpg","isProp":false,"region":"충남 천안시병"},{"row":214,"nm":"이정헌","p":"더불어민주당","rg":"광진구갑","comm":"과학기술정보방송통신위원회, 국회운영위원회","fac":[],"fb":"https://www.facebook.com/jhleehope","x":"https://x.com/Lee_jeong_heon","tier":"2","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/5762459L.jpg","isProp":false,"region":"서울 광진구갑"},{"row":215,"nm":"이종배","p":"국민의힘","rg":"충주시","comm":"기후에너지환경노동위원회","fac":[],"fb":"https://www.facebook.com/victoryleejb","x":"","tier":"2","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/HSW1214Q.jpg","isProp":false,"region":"충북 충주시"},{"row":216,"nm":"이종욱","p":"국민의힘","rg":"창원시진해구","comm":"","fac":[],"fb":"","x":"","tier":"2","memo":"위원회 없음 / SNS주소 없음","ph":"https://www.assembly.go.kr/static/portal/img/openassm/NLS46526.jpg","isProp":false,"region":"경남 창원시진해구"},{"row":217,"nm":"이주영","p":"개혁신당","rg":"","comm":"교육위원회","fac":[],"fb":"","x":"","tier":"2","memo":"SNS주소 없음","ph":"https://www.assembly.go.kr/static/portal/img/openassm/WI719547.jpg","isProp":true,"region":"비례대표"},{"row":218,"nm":"이주희","p":"더불어민주당","rg":"","comm":"과학기술정보방송통신위원회, 국회운영위원회, 성평등가족위원회","fac":[],"fb":"https://www.facebook.com/share/1CxP2VnHUW","x":"","tier":"2","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/RBM5454A.jpg","isProp":true,"region":"비례대표"},{"row":219,"nm":"이준석","p":"개혁신당","rg":"화성시을","comm":"재정경제기획위원회","fac":[],"fb":"","x":"","tier":"1","memo":"SNS주소 없음","ph":"https://www.assembly.go.kr/static/portal/img/openassm/QWL7778X.jpg","isProp":false,"region":"경기 화성시을"},{"row":220,"nm":"이진숙","p":"국민의힘","rg":"달성군","comm":"재정경제기획위원회","fac":[],"fb":"","x":"","tier":"1","memo":"SNS주소 없음","ph":"https://www.assembly.go.kr/static/portal/img/openassm/29V4537Y.jpg","isProp":false,"region":"대구 달성군"},{"row":221,"nm":"이철규","p":"국민의힘","rg":"동해시태백시삼척시정선군","comm":"","fac":[],"fb":"","x":"","tier":"1","memo":"위원회 없음 / SNS주소 없음","ph":"https://www.assembly.go.kr/static/portal/img/openassm/TZP9391O.jpg","isProp":false,"region":"강원 동해시태백시삼척시정선군"},{"row":222,"nm":"이춘석","p":"무소속","rg":"익산시갑","comm":"재정경제기획위원회","fac":[],"fb":"https://www.facebook.com/ojig.igsan.ichunseog","x":"","tier":"2","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/V2R7430Z.jpg","isProp":false,"region":"전북 익산시갑"},{"row":223,"nm":"이학영","p":"더불어민주당","rg":"군포시","comm":"기후에너지환경노동위원회","fac":[],"fb":"https://www.facebook.com/hackyoung1","x":"https://x.com/hackyoung1","tier":"2","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/K5F2023J.jpg","isProp":false,"region":"경기 군포시"},{"row":224,"nm":"이해민","p":"조국혁신당","rg":"","comm":"정무위원회","fac":[],"fb":"https://www.facebook.com/ok.haimin","x":"https://x.com/ok_haiminl","tier":"2","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/0698755I.jpg","isProp":true,"region":"비례대표"},{"row":225,"nm":"이해식","p":"더불어민주당","rg":"강동구을","comm":"행정안전위원회","fac":[],"fb":"https://www.facebook.com/leehsik","x":"","tier":"1","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/CCU1009B.jpg","isProp":false,"region":"서울 강동구을"},{"row":226,"nm":"이헌승","p":"국민의힘","rg":"부산진구을","comm":"정무위원회","fac":[],"fb":"https://www.facebook.com/ilovebusanjin","x":"","tier":"2","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/EVH1507C.jpg","isProp":false,"region":"부산 부산진구을"},{"row":227,"nm":"이훈기","p":"더불어민주당","rg":"남동구을","comm":"과학기술정보방송통신위원회","fac":[],"fb":"","x":"https://x.com//hoongihoongi","tier":"2","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/2S73768V.jpg","isProp":false,"region":"인천 남동구을"},{"row":228,"nm":"임문영","p":"더불어민주당","rg":"광산구을","comm":"산업통상자원중소벤처기업위원회","fac":[],"fb":"https://www.facebook.com/moon0","x":"","tier":"2","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/JVK71445.jpg","isProp":false,"region":"광주 광산구을"},{"row":229,"nm":"임미애","p":"더불어민주당","rg":"","comm":"국회운영위원회, 농림축산식품해양수산위원회","fac":[],"fb":"","x":"","tier":"2","memo":"SNS주소 없음","ph":"https://www.assembly.go.kr/static/portal/img/openassm/X639721U.jpg","isProp":true,"region":"비례대표"},{"row":230,"nm":"임오경","p":"더불어민주당","rg":"광명시갑","comm":"문화체육관광위원회","fac":[],"fb":"https://www.facebook.com/okyeong.lim","x":"","tier":"2","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/4T026790.jpg","isProp":false,"region":"경기 광명시갑"},{"row":231,"nm":"임이자","p":"국민의힘","rg":"상주시문경시","comm":"재정경제기획위원회","fac":[],"fb":"https://www.facebook.com/llj11","x":"","tier":"1","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/EH27538E.jpg","isProp":false,"region":"경북 상주시문경시"},{"row":232,"nm":"임종득","p":"국민의힘","rg":"영주시영양군봉화군","comm":"국방위원회","fac":[],"fb":"https://www.facebook.com/lim.jongdeuk","x":"","tier":"1","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/RAJ1024Z.jpg","isProp":false,"region":"경북 영주시영양군봉화군"},{"row":233,"nm":"임호선","p":"더불어민주당","rg":"증평군진천군음성군","comm":"행정안전위원회","fac":[],"fb":"","x":"","tier":"2","memo":"SNS주소 없음","ph":"https://www.assembly.go.kr/static/portal/img/openassm/FH777496.jpg","isProp":false,"region":"충북 증평군진천군음성군"},{"row":234,"nm":"장경태","p":"무소속","rg":"동대문구을","comm":"국토교통위원회","fac":[],"fb":"https://www.facebook.com/Jang.Kyungtae","x":"https://x.com/jktjj","tier":"2","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/RPN2293B.jpg","isProp":false,"region":"서울 동대문구을"},{"row":235,"nm":"장동혁","p":"국민의힘","rg":"보령시서천군","comm":"","fac":[],"fb":"","x":"","tier":"1","memo":"위원회 없음 / SNS주소 없음","ph":"https://www.assembly.go.kr/static/portal/img/openassm/KFM1081G.jpg","isProp":false,"region":"충남 보령시서천군"},{"row":236,"nm":"장종태","p":"더불어민주당","rg":"서구갑","comm":"국토교통위원회","fac":[],"fb":"https://www.facebook.com/changjt","x":"","tier":"2","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/CIZ8557P.jpg","isProp":false,"region":"대전 서구갑"},{"row":237,"nm":"장철민","p":"더불어민주당","rg":"동구","comm":"산업통상자원중소벤처기업위원회","fac":[],"fb":"https://www.facebook.com/JCM21st","x":"","tier":"1","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/2NV6751W.jpg","isProp":false,"region":"대전 동구"},{"row":238,"nm":"전용기","p":"더불어민주당","rg":"화성시정","comm":"국토교통위원회, 국회운영위원회","fac":[],"fb":"https://www.facebook.com/jeun.younggi","x":"","tier":"1","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/TJW93720.jpg","isProp":false,"region":"경기 화성시정"},{"row":239,"nm":"전은수","p":"더불어민주당","rg":"아산시을","comm":"산업통상자원중소벤처기업위원회, 성평등가족위원회","fac":[],"fb":"https://www.facebook.com/Jeoneunsu84","x":"","tier":"1","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/FYG6302V.jpg","isProp":false,"region":"충남 아산시을"},{"row":240,"nm":"전종덕","p":"진보당","rg":"","comm":"보건복지위원회","fac":[],"fb":"https://www.facebook.com/jjd7877","x":"https://x.com/jjd7877do","tier":"2","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/P8A4624C.jpg","isProp":true,"region":"비례대표"},{"row":241,"nm":"전진숙","p":"더불어민주당","rg":"북구을","comm":"보건복지위원회","fac":[],"fb":"","x":"","tier":"2","memo":"SNS주소 없음","ph":"https://www.assembly.go.kr/static/portal/img/openassm/QUR40502.jpg","isProp":false,"region":"광주 북구을"},{"row":242,"nm":"전현희","p":"더불어민주당","rg":"중구성동구갑","comm":"정무위원회","fac":[],"fb":"","x":"","tier":"1","memo":"SNS주소 없음","ph":"https://www.assembly.go.kr/static/portal/img/openassm/25G2571T.jpg","isProp":false,"region":"서울 중구성동구갑"},{"row":243,"nm":"정동만","p":"국민의힘","rg":"기장군","comm":"","fac":[],"fb":"https://www.facebook.com/dongman.jeong.7","x":"","tier":"2","memo":"위원회 없음","ph":"https://www.assembly.go.kr/static/portal/img/openassm/DAY6557K.jpg","isProp":false,"region":"부산 기장군"},{"row":244,"nm":"정동영","p":"더불어민주당","rg":"전주시병","comm":"과학기술정보방송통신위원회","fac":[],"fb":"https://www.facebook.com/coreacdy","x":"https://x.com/https://x.com/coreacdy","tier":"1","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/ARP89147.jpg","isProp":false,"region":"전북 전주시병"},{"row":245,"nm":"정성국","p":"국민의힘","rg":"부산진구갑","comm":"","fac":[],"fb":"","x":"","tier":"2","memo":"위원회 없음 / SNS주소 없음","ph":"https://www.assembly.go.kr/static/portal/img/openassm/CGW7415Z.jpg","isProp":false,"region":"부산 부산진구갑"},{"row":246,"nm":"정성호","p":"더불어민주당","rg":"동두천시양주시연천군갑","comm":"재정경제기획위원회","fac":[],"fb":"https://www.facebook.com/jungsungho1","x":"","tier":"1","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/V429892C.jpg","isProp":false,"region":"경기 동두천시양주시연천군갑"},{"row":247,"nm":"정연욱","p":"국민의힘","rg":"수영구","comm":"문화체육관광위원회","fac":[],"fb":"https://www.facebook.com/onlysuyeong","x":"","tier":"2","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/8XE7026P.jpg","isProp":false,"region":"부산 수영구"},{"row":248,"nm":"정일영","p":"더불어민주당","rg":"연수구을","comm":"국토교통위원회","fac":[],"fb":"https://www.facebook.com/chung1young","x":"","tier":"2","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/LT72093S.jpg","isProp":false,"region":"인천 연수구을"},{"row":249,"nm":"정점식","p":"국민의힘","rg":"통영시고성군","comm":"국회운영위원회","fac":[],"fb":"https://www.facebook.com/jjs0403","x":"","tier":"1","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/LJK4960Z.jpg","isProp":false,"region":"경남 통영시고성군"},{"row":250,"nm":"정준호","p":"더불어민주당","rg":"북구갑","comm":"문화체육관광위원회","fac":[],"fb":"https://www.facebook.com/junhojeong53","x":"https://x.com/jeongjunho53","tier":"2","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/IC499858.jpg","isProp":false,"region":"광주 북구갑"},{"row":251,"nm":"정진욱","p":"더불어민주당","rg":"동구남구갑","comm":"산업통상자원중소벤처기업위원회","fac":[],"fb":"https://www.facebook.com/chungchinook?id=100089680003518","x":"","tier":"2","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/9HE7226N.jpg","isProp":false,"region":"광주 동구남구갑"},{"row":252,"nm":"정청래","p":"더불어민주당","rg":"마포구을","comm":"외교통일위원회","fac":[],"fb":"https://www.facebook.com/cheongrae1","x":"","tier":"1","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/2385336L.jpg","isProp":false,"region":"서울 마포구을"},{"row":253,"nm":"정춘생","p":"조국혁신당","rg":"","comm":"성평등가족위원회, 행정안전위원회","fac":[],"fb":"https://www.facebook.com/profile.php?id=100044755050168","x":"","tier":"2","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/XG348314.jpg","isProp":true,"region":"비례대표"},{"row":254,"nm":"정태호","p":"더불어민주당","rg":"관악구을","comm":"재정경제기획위원회","fac":[],"fb":"https://www.facebook.com/JungTaeHo","x":"https://x.com/Jung_Taeho","tier":"1","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/UHB5553T.jpg","isProp":false,"region":"서울 관악구을"},{"row":255,"nm":"정혜경","p":"진보당","rg":"","comm":"기후에너지환경노동위원회","fac":[],"fb":"https://www.facebook.com/profile.php?id=61557922538873","x":"https://x.com/jhkjinbo","tier":"2","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/BNV6535N.jpg","isProp":true,"region":"비례대표"},{"row":256,"nm":"정희용","p":"국민의힘","rg":"고령군성주군칠곡군","comm":"농림축산식품해양수산위원회","fac":[],"fb":"https://www.facebook.com/heeyong4u","x":"","tier":"2","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/PFG2137X.jpg","isProp":false,"region":"경북 고령군성주군칠곡군"},{"row":257,"nm":"조경태","p":"국민의힘","rg":"사하구을","comm":"농림축산식품해양수산위원회","fac":[],"fb":"https://www.facebook.com/Choforce","x":"","tier":"1","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/5KV82250.jpg","isProp":false,"region":"부산 사하구을"},{"row":258,"nm":"조계원","p":"더불어민주당","rg":"여수시을","comm":"문화체육관광위원회","fac":[],"fb":"https://www.facebook.com/chogyewon","x":"","tier":"2","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/8TU8443O.jpg","isProp":false,"region":"전남 여수시을"},{"row":259,"nm":"조배숙","p":"국민의힘","rg":"","comm":"법제사법위원회","fac":[],"fb":"https://www.facebook.com/https://www.facebook.com/chobaesook","x":"","tier":"1","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/IWK63872.jpg","isProp":true,"region":"비례대표"},{"row":260,"nm":"조승래","p":"더불어민주당","rg":"유성구갑","comm":"재정경제기획위원회","fac":[],"fb":"https://www.facebook.com/gasiri7","x":"https://x.com/gasiri","tier":"1","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/FYI20317.jpg","isProp":false,"region":"대전 유성구갑"},{"row":261,"nm":"조승환","p":"국민의힘","rg":"중구영도구","comm":"농림축산식품해양수산위원회","fac":[],"fb":"https://www.facebook.com/cshwan217","x":"","tier":"2","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/ME83002L.jpg","isProp":false,"region":"부산 중구영도구"},{"row":262,"nm":"조은희","p":"국민의힘","rg":"서초구갑","comm":"행정안전위원회","fac":[],"fb":"https://www.facebook.com/gracecho1127","x":"","tier":"2","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/MQU41854.jpg","isProp":false,"region":"서울 서초구갑"},{"row":263,"nm":"조인철","p":"더불어민주당","rg":"서구갑","comm":"국토교통위원회","fac":[],"fb":"https://www.facebook.com/incheul.cho.5","x":"","tier":"2","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/ZKB18611.jpg","isProp":false,"region":"광주 서구갑"},{"row":264,"nm":"조정식","p":"무소속","rg":"시흥시을","comm":"","fac":[],"fb":"https://www.facebook.com/chojs21","x":"https://x.com/chojs21","tier":"2","memo":"위원회 없음","ph":"https://www.assembly.go.kr/static/portal/img/openassm/IN328264.jpg","isProp":false,"region":"경기 시흥시을"},{"row":265,"nm":"조정훈","p":"국민의힘","rg":"마포구갑","comm":"","fac":[],"fb":"https://www.facebook.com/544chojunghun","x":"https://x.com/chojunghun544","tier":"1","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/WJL30106.jpg","isProp":false,"region":"서울 마포구갑"},{"row":266,"nm":"조지연","p":"국민의힘","rg":"경산시","comm":"국회운영위원회","fac":[],"fb":"https://www.facebook.com/jiyeon.cho2","x":"","tier":"1","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/3NI5978A.jpg","isProp":false,"region":"경북 경산시"},{"row":267,"nm":"주진우","p":"국민의힘","rg":"해운대구갑","comm":"기후에너지환경노동위원회","fac":[],"fb":"https://www.facebook.com/https://www.facebook.com/joojjinwoo","x":"","tier":"1","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/GJK57930.jpg","isProp":false,"region":"부산 해운대구갑"},{"row":268,"nm":"주철현","p":"더불어민주당","rg":"여수시갑","comm":"농림축산식품해양수산위원회","fac":[],"fb":"https://www.facebook.com/yeosuJCH","x":"","tier":"2","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/T465023H.jpg","isProp":false,"region":"전남 여수시갑"},{"row":269,"nm":"주호영","p":"국민의힘","rg":"수성구갑","comm":"문화체육관광위원회","fac":[],"fb":"https://www.facebook.com/@sangtoil","x":"https://x.com/@sangtoil","tier":"1","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/8SV6917G.jpg","isProp":false,"region":"대구 수성구갑"},{"row":270,"nm":"진선미","p":"더불어민주당","rg":"강동구갑","comm":"문화체육관광위원회","fac":[],"fb":"https://www.facebook.com/smjingogo","x":"https://x.com/sunmee_jin","tier":"1","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/68P7228G.jpg","isProp":false,"region":"서울 강동구갑"},{"row":271,"nm":"진성준","p":"더불어민주당","rg":"강서구을","comm":"국방위원회","fac":[],"fb":"https://www.facebook.com/hotjjoon","x":"https://x.com/jinsungjoon","tier":"1","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/3C23171A.jpg","isProp":false,"region":"서울 강서구을"},{"row":272,"nm":"진종오","p":"국민의힘","rg":"","comm":"문화체육관광위원회","fac":[],"fb":"https://www.facebook.com/jinjong.o","x":"","tier":"1","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/QDU1100U.jpg","isProp":true,"region":"비례대표"},{"row":273,"nm":"차규근","p":"조국혁신당","rg":"","comm":"산업통상자원중소벤처기업위원회","fac":[],"fb":"https://www.facebook.com/https://www.facebook.com/profile.php?id=1000950370","x":"","tier":"2","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/KNP22261.jpg","isProp":true,"region":"비례대표"},{"row":274,"nm":"차지호","p":"더불어민주당","rg":"오산시","comm":"외교통일위원회","fac":[],"fb":"https://www.facebook.com/osanchajiho","x":"","tier":"2","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/RC885085.jpg","isProp":false,"region":"경기 오산시"},{"row":275,"nm":"채현일","p":"더불어민주당","rg":"영등포구갑","comm":"행정안전위원회","fac":[],"fb":"https://www.facebook.com/hyunil.chai","x":"","tier":"1","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/1S05899F.jpg","isProp":false,"region":"서울 영등포구갑"},{"row":276,"nm":"천준호","p":"더불어민주당","rg":"강북구갑","comm":"국방위원회, 국회운영위원회","fac":[],"fb":"https://www.facebook.com/juno3355","x":"https://x.com/juno3355","tier":"2","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/A494529E.jpg","isProp":false,"region":"서울 강북구갑"},{"row":277,"nm":"천하람","p":"개혁신당","rg":"","comm":"국방위원회, 국회운영위원회","fac":[],"fb":"https://www.facebook.com/haram.chun.71","x":"","tier":"1","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/YGB8604T.jpg","isProp":true,"region":"비례대표"},{"row":278,"nm":"최기상","p":"더불어민주당","rg":"금천구","comm":"정무위원회","fac":[],"fb":"https://www.facebook.com/gisang2020","x":"","tier":"2","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/I5I2468R.jpg","isProp":false,"region":"서울 금천구"},{"row":279,"nm":"최민희","p":"더불어민주당","rg":"남양주시갑","comm":"문화체육관광위원회","fac":[],"fb":"https://www.facebook.com/minhee.official","x":"","tier":"1","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/YS38221N.jpg","isProp":false,"region":"경기 남양주시갑"},{"row":280,"nm":"최보윤","p":"국민의힘","rg":"","comm":"","fac":[],"fb":"https://www.facebook.com/bychoilaw","x":"","tier":"1","memo":"위원회 없음","ph":"https://www.assembly.go.kr/static/portal/img/openassm/UOS16250.jpg","isProp":true,"region":"비례대표"},{"row":281,"nm":"최수진","p":"국민의힘","rg":"","comm":"국회운영위원회, 행정안전위원회","fac":[],"fb":"https://www.facebook.com/profile.php?id=61557956860339","x":"","tier":"1","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/WJG74792.jpg","isProp":true,"region":"비례대표"},{"row":282,"nm":"최은석","p":"국민의힘","rg":"동구군위군갑","comm":"재정경제기획위원회","fac":[],"fb":"https://www.facebook.com/eschoi","x":"","tier":"2","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/UF53617M.jpg","isProp":false,"region":"대구 동구군위군갑"},{"row":283,"nm":"최혁진","p":"무소속","rg":"","comm":"과학기술정보방송통신위원회","fac":[],"fb":"https://www.facebook.com/mygaruda","x":"https://x.com/Hyuckjin_Choi","tier":"2","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/CC78321E.jpg","isProp":true,"region":"비례대표"},{"row":284,"nm":"최형두","p":"국민의힘","rg":"창원시마산합포구","comm":"과학기술정보방송통신위원회","fac":[],"fb":"https://www.facebook.com/https://www.facebook.com/hd.choi","x":"","tier":"2","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/A0P4646G.jpg","isProp":false,"region":"경남 창원시마산합포구"},{"row":285,"nm":"한기호","p":"국민의힘","rg":"춘천시철원군화천군양구군을","comm":"국방위원회","fac":[],"fb":"","x":"","tier":"1","memo":"SNS주소 없음","ph":"https://www.assembly.go.kr/static/portal/img/openassm/JQA21112.jpg","isProp":false,"region":"강원 춘천시철원군화천군양구군을"},{"row":286,"nm":"한동훈","p":"무소속","rg":"북구갑","comm":"외교통일위원회","fac":[],"fb":"https://www.facebook.com/dh.han.3","x":"","tier":"1","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/5DC8083A.jpg","isProp":false,"region":"부산 북구갑"},{"row":287,"nm":"한민수","p":"더불어민주당","rg":"강북구을","comm":"정무위원회","fac":[],"fb":"https://www.facebook.com/gangbukfirst","x":"https://x.com/@mshan1514","tier":"1","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/8JG4358H.jpg","isProp":false,"region":"서울 강북구을"},{"row":288,"nm":"한병도","p":"더불어민주당","rg":"익산시을","comm":"교육위원회, 국회운영위원회, 정보위원회","fac":[],"fb":"https://www.facebook.com/hbd7851","x":"","tier":"1","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/H5476989.jpg","isProp":false,"region":"전북 익산시을"},{"row":289,"nm":"한정애","p":"더불어민주당","rg":"강서구병","comm":"외교통일위원회","fac":[],"fb":"https://www.facebook.com/jeongae.han","x":"https://x.com/hanjeoungae_na","tier":"1","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/XPP2564T.jpg","isProp":false,"region":"서울 강서구병"},{"row":290,"nm":"한준호","p":"더불어민주당","rg":"고양시을","comm":"과학기술정보방송통신위원회","fac":[],"fb":"https://www.facebook.com/hanjuno.news","x":"https://x.com/juno_news","tier":"1","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/BCQ55105.jpg","isProp":false,"region":"경기 고양시을"},{"row":291,"nm":"한지아","p":"국민의힘","rg":"","comm":"","fac":[],"fb":"","x":"","tier":"2","memo":"위원회 없음 / SNS주소 없음","ph":"https://www.assembly.go.kr/static/portal/img/openassm/Q918403D.jpg","isProp":true,"region":"비례대표"},{"row":292,"nm":"한창민","p":"사회민주당","rg":"","comm":"정무위원회","fac":[],"fb":"https://www.facebook.com/han.changmin.7","x":"https://x.com/samin_changmin","tier":"2","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/T4I4862D.jpg","isProp":true,"region":"비례대표"},{"row":293,"nm":"허성무","p":"더불어민주당","rg":"창원시성산구","comm":"산업통상자원중소벤처기업위원회","fac":[],"fb":"https://www.facebook.com/huhmooo","x":"","tier":"2","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/HHB5652A.jpg","isProp":false,"region":"경남 창원시성산구"},{"row":294,"nm":"허영","p":"더불어민주당","rg":"춘천시철원군화천군양구군갑","comm":"국토교통위원회","fac":[],"fb":"https://www.facebook.com/doingbeing","x":"https://x.com/doingbeing","tier":"2","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/FU53642G.jpg","isProp":false,"region":"강원 춘천시철원군화천군양구군갑"},{"row":295,"nm":"허종식","p":"더불어민주당","rg":"동구미추홀구갑","comm":"보건복지위원회","fac":[],"fb":"https://www.facebook.com/heojongsik","x":"","tier":"2","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/VCP96419.jpg","isProp":false,"region":"인천 동구미추홀구갑"},{"row":296,"nm":"홍기원","p":"더불어민주당","rg":"평택시갑","comm":"외교통일위원회","fac":[],"fb":"https://www.facebook.com/hongkw.win","x":"","tier":"2","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/5MD4184K.jpg","isProp":false,"region":"경기 평택시갑"},{"row":297,"nm":"황명선","p":"더불어민주당","rg":"논산시계룡시금산군","comm":"국방위원회","fac":[],"fb":"","x":"","tier":"2","memo":"SNS주소 없음","ph":"https://www.assembly.go.kr/static/portal/img/openassm/RJH6314D.jpg","isProp":false,"region":"충남 논산시계룡시금산군"},{"row":298,"nm":"황운하","p":"조국혁신당","rg":"","comm":"국토교통위원회","fac":[],"fb":"https://www.facebook.com/unha.hwang","x":"","tier":"2","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/0YT3774N.jpg","isProp":true,"region":"비례대표"},{"row":299,"nm":"황정아","p":"더불어민주당","rg":"유성구을","comm":"과학기술정보방송통신위원회","fac":[],"fb":"https://www.facebook.com/hwangspace","x":"https://x.com/jungaHwangSpace","tier":"2","memo":"","ph":"https://www.assembly.go.kr/static/portal/img/openassm/T6A6557F.jpg","isProp":false,"region":"대전 유성구을"},{"row":300,"nm":"황희","p":"더불어민주당","rg":"양천구갑","comm":"국토교통위원회","fac":[],"fb":"","x":"","tier":"2","memo":"SNS주소 없음","ph":"https://www.assembly.go.kr/static/portal/img/openassm/0VU8517U.jpg","isProp":false,"region":"서울 양천구갑"},{"row":0,"nm":"이재명","p":"더불어민주당","rg":"","comm":"","fac":[],"fb":"https://www.facebook.com/jaemyunglee","x":"https://x.com/Jaemyung_Lee","tier":"1","memo":"대통령","ph":"","isProp":false,"region":""}];
+let D={members:INLINE_MEMBERS, posts:[]};
+// people.html(부모, 공방 탭)이 iframe 너머로 명단을 읽어갈 때 씀 —
+// let/const 최상위 선언은 window.* 로 안 보여서 함수로 명시 노출해야 함.
+window.getRosterState = function(){ return { members: D.members, fsLoaded: _fsLoaded }; };
+let F={q:'',party:[],fac:[],tier:[],rg:[],sido:[],region:[]};
+const SIDOS=['서울','부산','대구','인천','광주','대전','울산','세종','경기','강원','충북','충남','전북','전남','경북','경남','제주'];
+function parseRg(rg, isProp){
+  if(isProp || !rg || rg.trim()==='' || rg==='비례대표') return {sido:null, rest:'비례대표', isProp:true, raw:'비례대표'};
+  let trimmed=rg.trim();
+  for(let s of SIDOS){
+    if(trimmed===s) return {sido:s, rest:'', isProp:false, raw:trimmed};
+    if(trimmed.startsWith(s+' ')){
+      return {sido:s, rest:trimmed.slice(s.length+1).trim(), isProp:false, raw:trimmed};
+    }
+  }
+  return {sido:null, rest:trimmed, isProp:false, raw:trimmed};
+}
+function getSido(rg,isProp){return parseRg(rg,isProp).sido;}
+
+/* ── 지역 필터 (시/도 → 시/군/구 2단 드롭다운 + 체크박스 칩) ────────────────
+   각 의원의 m.region = "서울 중랑구갑" 형태(이글아이 데이터 기반). 비례대표는 region 없음. */
+function splitRegion(region){
+  if(!region || region==='비례대표') return null;
+  if(region.indexOf('세종')===0) return {sido:'세종', gugun:region};   // "세종특별자치시갑" 등 통째로
+  const sp = region.indexOf(' ');
+  if(sp<0) return {sido:region, gugun:''};
+  return {sido:region.slice(0,sp), gugun:region.slice(sp+1)};
+}
+function regionTree(){
+  const tree={};
+  D.members.forEach(m=>{
+    const s=splitRegion(m.region);
+    if(!s) return;
+    (tree[s.sido]=tree[s.sido]||new Set()).add(s.gugun||'(시/도 전체)');
+  });
+  return tree;
+}
+function buildRegionFilter(){
+  const sel=$('regionSel'); if(!sel) return;
+  const tree=regionTree();
+  const order=SIDOS.filter(s=>tree[s]);
+  sel.innerHTML='<option value="">지역 선택</option>'+order.map(s=>'<option value="'+esc(s)+'">'+esc(s)+'</option>').join('');
+  sel.onchange=function(){
+    const key=sel.value; if(!key) return;
+    if(!F.region.includes(key)) F.region.push(key);
+    hasFiltered=true;
+    sel.value='';
+    renderRegionChips(); draw();
+  };
+  renderRegionChips();
+}
+function renderRegionChips(){
+  const box=$('regionChips'); if(!box) return;
+  box.innerHTML=F.region.map(r=>'<span class="regChip"><input type="checkbox" checked data-region="'+esc(r)+'" style="margin-right:2px">'+esc(r)+'<span class="rx" data-region-rm="'+esc(r)+'">×</span></span>').join('');
+  box.querySelectorAll('[data-region-rm]').forEach(el=>{el.onclick=function(){F.region=F.region.filter(x=>x!==el.dataset.regionRm);renderRegionChips();draw();};});
+  box.querySelectorAll('input[data-region]').forEach(cb=>{cb.onclick=function(){ if(!cb.checked){F.region=F.region.filter(x=>x!==cb.dataset.region);} renderRegionChips();draw(); };});
+}
+function memberInRegion(m){
+  if(!F.region.length) return true;
+  const s=splitRegion(m.region);
+  if(!s) return false;   // 비례대표는 지역 필터 걸면 제외
+  return F.region.includes(s.sido);   // 광역시도 단위로만 매칭
+}
+document.addEventListener('DOMContentLoaded',function(){ let ht=document.getElementById('homeTitle'); if(ht){ ht.onclick=function(){ homeReset(); }; } });
+function homeReset(){F={q:'',party:[],fac:[],tier:[],rg:[],sido:[],region:[]};$('q').value='';hasFiltered=false;SEL.clear();document.querySelectorAll('.fTag.on').forEach(b=>b.classList.remove('on'));if($('regionSel'))$('regionSel').value='';renderRegionChips();let bf=$('bottomFeed');if(bf)bf.style.display='none';_preFeedScrollY=null;_userManuallyCleared=false; _lastFilterSig=''; draw(); window.scrollTo({top:0,behavior:'smooth'});}
+
+// Facebook Page Plugin은 '페이지'만 임베드 가능 — 개인 프로필 URL은 무조건 하얀 빈 박스가 된다.
+// profile.php · /people/ · 점 들어간 vanity(firstname.lastname[.NNN]) 는 개인 프로필로 보고 아예 렌더 안 함.
+function isEmbeddableFb(url){
+  if(!url) return false;
+  let path;
+  try{ path = new URL(url, 'https://www.facebook.com').pathname.replace(/^\/+|\/+$/g,''); }
+  catch(e){ path = String(url); }
+  if(!path) return false;
+  if(/^profile\.php/i.test(path)) return false;
+  if(/^(people|pages)\//i.test(path)) return false;
+  let seg = path.split('/')[0];
+  if(seg.includes('.')) return false;   // 개인 프로필 vanity (FB 페이지는 점을 거의 안 씀)
+  return true;
+}
+const FB_WORKER = 'https://naver-news-proxy.YOUR-ACCOUNT.workers.dev';
+// FB URL에서 프로필 식별자(vanity 또는 profile.php id) 추출
+function fbVanity(url){
+  try{
+    const u = new URL(url, 'https://www.facebook.com');
+    const id = u.searchParams.get('id');
+    if(/profile\.php/i.test(u.pathname) && id) return id;
+    let seg = u.pathname.replace(/^\/+|\/+$/g,'').split('/')[0];
+    return seg || '';
+  }catch(e){ return ''; }
+}
+
+let selMode=true; let SEL=new Set(); let _bulkTotal=0;
+// 액션바(선택 개수·포스팅 버튼·액션 활성/비활성) 즉시 동기화 — 카드 체크박스 클릭 시 full draw 없이 갱신
+function syncBulkBar(){
+  let feedBtn=document.getElementById('bulkFeedBtn');
+  if(feedBtn && /포스팅 보기/.test(feedBtn.textContent)) feedBtn.textContent='포스팅 보기 '+SEL.size;
+  let selN=document.getElementById('bulkSelN'); if(selN) selN.textContent=SEL.size;
+  let acts=document.getElementById('bulkActs'); if(acts) acts.classList.toggle('off', SEL.size===0);
+  let chk=document.getElementById('bulkAllChk'); if(chk) chk.checked = SEL.size>0 && SEL.size===_bulkTotal;
+}
+let hasFiltered=false; // 하위호환용 더미(직접 참조하지 않음)
+function isAnyFilter(){
+  return F.party.length>0 || F.fac.length>0 || F.tier.length>0
+      || F.rg.length>0 || F.sido.length>0 || F.region.length>0 || (F.q||'').trim()!=='';
+}
+function esc(s){if(!s)return'';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+
+function $(id){return document.getElementById(id);}
+function getLocal(){try{return JSON.parse(localStorage.getItem(LS_KEY)||'{}');}catch(e){return {};}}
+// ═══════════════════════════════════════════════════════════
+// 저장 계층 (v3) — 캐시 우선 렌더 + 증분 로드
+//   · 최초: localStorage에서 즉시 그림
+//   · 백그라운드: 마지막 로드 이후 바뀐 문서만 Firestore에서 받음
+//   · 편집: 캐시 + Firestore 즉시 갱신
+//   · 편집자 1인 가정 → 충돌 처리는 dirty-lock만
+// ═══════════════════════════════════════════════════════════
+const EDIT_FIELDS=['fac','tier','memo','fb','x','ph'];
+const SYNC_META_KEY = 'sns_sync_meta_v1' + (SNS_NS==='shared' ? '' : '__' + SNS_NS);   // {lastSyncMs: number}
+let _fsLoaded=false;
+let dirtyRows=new Set();
+
+function getSyncMeta(){try{return JSON.parse(localStorage.getItem(SYNC_META_KEY)||'{}');}catch(e){return {};}}
+function setSyncMeta(o){try{localStorage.setItem(SYNC_META_KEY,JSON.stringify(o));}catch(e){}}
+
+function snapshotMember(m){
+  return {fac:Array.isArray(m.fac)?m.fac.slice():[], tier:m.tier||'', memo:m.memo||'',
+          fb:m.fb||'', x:m.x||'', wiki:m.wiki||'', ph:m.ph||'', hiddenUntil:m.hiddenUntil||0};
+}
+function applyRecord(m, r){
+  if(!r) return;
+  if(r.fac  !== undefined) m.fac  = Array.isArray(r.fac) ? r.fac.slice() : [];
+  if(r.tier !== undefined) m.tier = r.tier || '';
+  if(r.memo !== undefined) m.memo = r.memo || '';
+  if(r.fb   !== undefined) m.fb   = r.fb   || '';
+  if(r.x    !== undefined) m.x    = r.x    || '';
+  if(r.wiki !== undefined) m.wiki = r.wiki || '';
+  // ph는 하드코딩 사진을 존중 — Firestore 빈 값은 무시 (덮어쓰지 않음)
+  if(r.ph && r.ph.trim()) m.ph = r.ph;
+  // hiddenUntil: 항상 반영 (0/null 도 유효 = 스킵 해제)
+  if(r.hiddenUntil !== undefined) m.hiddenUntil = r.hiddenUntil || 0;
+}
+function writeCache(){
+  let obj={}; D.members.forEach(m=>{ obj[m.row]=snapshotMember(m); });
+  try{ localStorage.setItem(LS_KEY, JSON.stringify(obj)); }catch(e){ console.warn('캐시 저장 실패', e); }
+}
+function setStatus(text, bg, revertMs){
+  let st=document.getElementById('fsStatus'); if(!st) return;
+  st.hidden=false; st.textContent=text; st.style.background=bg||'#F8F9FA';
+  if(revertMs) setTimeout(defaultStatus, revertMs);
+}
+/* 평상시엔 "동기화됨 · N분 전" 같은 안내를 띄우지 않고 숨김 — DB 연결이 끊겼을 때만 표시 */
+function defaultStatus(){
+  let st=document.getElementById('fsStatus'); if(!st) return;
+  if(snsAuthBlocked){ st.hidden=false; st.textContent='⚠ 정글에서 먼저 로그인하세요 — 지금 수정하면 이 브라우저에만 저장됨'; st.style.background='#FCE8E6'; return; }
+  if(!db){ st.hidden=false; st.textContent='DB 미연결 (로컬 저장만)'; st.style.background='#FFF4CE'; return; }
+  st.hidden=true;
+}
+
+function saveLocal(changedRow=null){
+  if(changedRow!==null){ lastChangedRows.add(String(changedRow)); dirtyRows.add(String(changedRow)); }
+  writeCache();
+
+  if(!db){ setStatus('로컬에만 저장됨 (DB 미연결)','#FFF4CE',2500); return; }
+  if(saveDebounceTimer) clearTimeout(saveDebounceTimer);
+  saveDebounceTimer=setTimeout(()=>{
+    let rows=[...lastChangedRows];
+    if(!rows.length) return;
+    setStatus('저장중...','#FFF4CE');
+    let sending=new Set(rows);
+    let promises=rows.map(row=>{
+      let mem=D.members.find(x=>String(x.row)===String(row));
+      if(!mem) return Promise.resolve(null);
+      let rec=snapshotMember(mem);
+      let docId=`${row}_${mem.nm}`;
+      let ts=firebase.firestore.FieldValue.serverTimestamp();
+      // 객관 정보(FB·X·위키·사진) → 공유 컬렉션(root/politicians). 모든 고객사가 함께 봄.
+      let writes=[ sharedPoliticiansCol().doc(docId).set({
+        fb:rec.fb, x:rec.x, wiki:rec.wiki||'', ...(rec.ph ? {ph:rec.ph} : {}),
+        name:mem.nm, id:docId, updatedAt:ts
+      },{merge:true}) ];
+      if(SNS_NS==='shared'){
+        // 하위호환: 비로그인/구세션은 계파·티어·메모도 root에 그대로
+        writes.push( sharedPoliticiansCol().doc(docId).set({
+          factions:rec.fac, tier:rec.tier, memo:rec.memo, ...(mem.hiddenUntil ? {hiddenUntil:mem.hiddenUntil} : {}),
+          name:mem.nm, id:docId, updatedAt:ts
+        },{merge:true}) );
+      }else{
+        // 주관 정보(계파·티어·메모·피드숨김) → 고객사별 칸
+        writes.push( politiciansCol().doc(docId).set({
+          factions:rec.fac, tier:rec.tier, memo:rec.memo, ...(mem.hiddenUntil ? {hiddenUntil:mem.hiddenUntil} : {}),
+          name:mem.nm, id:docId, updatedAt:ts
+        },{merge:true}) );
+      }
+      return Promise.all(writes).then(()=>({nm:mem.nm, rec}));
+    });
+    Promise.all(promises).then(rs=>{
+      let ok=rs.filter(Boolean);
+      let last=ok[ok.length-1];
+      setStatus('DB 저장됨: '+(last?last.nm:'')+(last&&last.rec.fac.length?' ['+last.rec.fac.join(',')+']':''),'#E6F4EA',2500);
+      sending.forEach(r=>{ lastChangedRows.delete(r); dirtyRows.delete(r); });
+      // 편집자가 저장한 순간이 곧 최신 시점 → 다음 증분 로드의 기준을 여기로
+      setSyncMeta({lastSyncMs:Date.now()});
+    }).catch(e=>{
+      console.warn('DB 저장 실패', e);
+      // 사라지지 않게 유지 — 다음 저장이 성공하면 그때 덮어써짐
+      setStatus('⚠ DB 저장 실패 — 이 브라우저에만 보관됨. 권한이 없거나 연결이 끊겼어요.','#FCE8E6');
+    });
+  },300);
+}
+
+function getHiddenPostIds(){try{return JSON.parse(localStorage.getItem(HIDDEN_POSTS_KEY)||'{}');}catch(e){return {};}}
+const HIDDEN_MEMBERS_KEY='hidden_member_rows_v1';
+function getHiddenMembers(){try{return JSON.parse(localStorage.getItem(HIDDEN_MEMBERS_KEY)||'{}');}catch(e){return {};}}
+
+// ─── 피드 스킵 (일단 빼기 / 하루 / 한 달) ───
+window._sessionHidden = window._sessionHidden || new Set();
+function isFeedHidden(m){
+  if(!m) return false;
+  if(window._sessionHidden.has(String(m.row))) return true;
+  if(m.hiddenUntil && Date.now() < m.hiddenUntil) return true;
+  return false;
+}
+function hideFeedForDuration(row, ms){
+  let mem = D.members.find(x => String(x.row) === String(row));
+  if(!mem) return;
+  if(ms <= 0){
+    window._sessionHidden.add(String(row));
+    return;
+  }
+  mem.hiddenUntil = Date.now() + ms;
+  saveLocal(row);
+}
+
+
+function loadLocal(){
+  let local=getLocal();
+  D.members.forEach(m=>{ applyRecord(m, local[m.row]); });
+}
+
+// 증분 로드: updatedAt > lastSyncMs 인 문서만 받아옴
+// full=true 이면 캐시 무시하고 전체 재로드 (다른 기기에서 편집했을 때 대비)
+async function loadFromFirestore(opts){
+  opts=opts||{};
+  if(!db){ setStatus('DB 미연결 (로컬 저장만)','#FFF4CE'); return; }
+  let meta=getSyncMeta();
+  let sinceMs = opts.full ? 0 : (meta.lastSyncMs||0);
+  try{
+    let sinceTs = sinceMs>0 ? firebase.firestore.Timestamp.fromMillis(sinceMs) : null;
+    let fetchCol = (col)=>{ let q=col; if(sinceTs) q=q.where('updatedAt','>',sinceTs); return q.get(); };
+    let sameCol = (SNS_NS==='shared');   // 이 경우 politiciansCol() === sharedPoliticiansCol()
+    let [sharedSnap, cliSnap] = sameCol
+      ? await fetchCol(politiciansCol()).then(s=>[s,s])
+      : await Promise.all([ fetchCol(sharedPoliticiansCol()), fetchCol(politiciansCol()) ]);
+    let index = (snap)=>{
+      let byId={}, byName={};
+      snap.forEach(doc=>{
+        let d=doc.data();
+        let name=d.name||doc.id.split('_').slice(1).join('_')||doc.id;
+        byId[doc.id]=d; byName[name]=d;
+      });
+      return {byId, byName};
+    };
+    let S=index(sharedSnap), C=index(cliSnap);
+    let pick=(idx,m)=> idx.byId[`${m.row}_${m.nm}`] || idx.byName[m.nm] || idx.byId[m.nm]
+                       || (m.legacyNm ? idx.byId[`${m.row}_${m.legacyNm}`] : undefined);
+    let touched=0;
+    D.members.forEach(m=>{
+      if(dirtyRows.has(String(m.row))) return;
+      let sd=pick(S,m), cd=pick(C,m);
+      if(!sd && !cd) return;
+      // 객관 정보 = 공유 컬렉션
+      if(sd) applyRecord(m, { fb: sd.fb, x: sd.x, wiki: sd.wiki, ph: sd.ph });
+      // 주관 정보 = 고객사 칸 (shared 모드면 같은 문서)
+      let cc = cd || (sameCol ? sd : null);
+      if(cc) applyRecord(m, {
+        fac : cc.factions!==undefined ? cc.factions : cc.fac,
+        tier: cc.tier, memo: cc.memo, hiddenUntil: cc.hiddenUntil
+      });
+      touched++;
+    });
+    _fsLoaded=true;
+    if(touched>0){ writeCache(); buildFilters(); draw(); }
+    setSyncMeta({lastSyncMs:Date.now()});
+    let readCount = sharedSnap.size + (sameCol ? 0 : cliSnap.size);
+    let mode = opts.full ? '전체' : (sinceMs>0 ? '증분' : '초기');
+    if(opts.userTriggered){
+      setStatus(`동기화 완료 (${mode} · 읽기 ${readCount}건)`,'#E6F4EA',2500);
+    }else{
+      defaultStatus();
+    }
+  }catch(e){
+    console.warn('DB 로드 실패', e);
+    // updatedAt 인덱스 없음 등의 이유로 실패하면 전체 로드로 폴백
+    if(!opts.full && /index|updatedAt/i.test(e.message||'')){
+      console.warn('증분 로드 실패 → 전체 로드로 폴백');
+      return loadFromFirestore({full:true, userTriggered:opts.userTriggered});
+    }
+    setStatus('⚠ DB 로드 실패 — 캐시로 표시중','#FCE8E6',6000);
+  }
+}
+
+// 동명이인 구분 — legacyNm은 기존 문서 이관용
+(function(){
+  let dupes={116:'박지원_올드', 117:'박지원_영'};
+  D.members.forEach(m=>{
+    if(dupes[m.row] && m.nm==='박지원'){ m.legacyNm=m.nm; m.nm=dupes[m.row]; }
+  });
+})();
+
+// ─── 초기 부팅 ───
+// 캐시로 즉시 상태만 채우고, 실제 draw는 파일 끝의 buildFilters();draw(); 가 담당
+// (그 뒤에 백그라운드 증분 로드)
+loadLocal();
+setTimeout(async ()=>{
+  await authReady;
+  await migrateSharedFieldsOnce();
+  await seedSnsIfNeeded();
+  buildFilters(); buildRegionFilter(); draw();
+  loadFromFirestore(); defaultStatus();
+}, 100);
+
+// ─── 일회성: Firestore의 오염된 빈 ph 필드 정리 ───
+// 과거 저장 계층 버그로 빈 문자열 ph가 300건 저장되어 하드코딩 사진을 가림
+// 로컬에 정리 완료 마커가 있으면 스킵 (한 번만 실행)
+setTimeout(async ()=>{
+  await authReady;
+  if(!db) return;
+  const MARKER='ph_cleanup_v1_done';
+  if(localStorage.getItem(MARKER)) return;
+  try{
+    setStatus('사진 데이터 정리 중...','#FFF4CE');
+    const snap = await politiciansCol().get();
+    let cleaned = 0;
+    const batch = db.batch();
+    snap.forEach(doc=>{
+      const d = doc.data();
+      if(d.ph !== undefined && (!d.ph || !String(d.ph).trim())){
+        batch.update(doc.ref, {ph: firebase.firestore.FieldValue.delete()});
+        cleaned++;
+      }
+    });
+    if(cleaned > 0){
+      await batch.commit();
+      console.log('[사진정리] 오염된 ph 필드 삭제:', cleaned, '건');
+      // 캐시도 정리
+      let cache = getLocal();
+      Object.keys(cache).forEach(k=>{ if(cache[k] && (!cache[k].ph || !String(cache[k].ph).trim())) delete cache[k].ph; });
+      try{ localStorage.setItem(LS_KEY, JSON.stringify(cache)); }catch(e){}
+      setStatus('정리 완료 — 새로고침 후 사진 확인','#E6F4EA', 4000);
+      // 자동 새로고침 (3초 후)
+      setTimeout(()=>location.reload(), 3000);
+    } else {
+      console.log('[사진정리] 정리할 필드 없음');
+    }
+    localStorage.setItem(MARKER, String(Date.now()));
+  }catch(e){
+    console.warn('[사진정리] 실패', e);
+    setStatus('사진 데이터 정리 실패 — 콘솔 확인','#FCE8E6', 6000);
+  }
+}, 2000);
+
+
+
+// mock 제거 - 실제 Facebook 임베드만 사용
+D.posts = []; // 5일치 포스팅은 Page Plugin 타임라인으로 표시 (mock 텍스트 더미 없음)
+
+
+function countBy(){
+  let partyCounts={}; D.members.forEach(m=>{partyCounts[m.p]=(partyCounts[m.p]||0)+1;});
+  let facCounts={}; D.members.forEach(m=>{(m.fac||[]).forEach(f=>{ if(f==='비례') return; facCounts[f]=(facCounts[f]||0)+1;});});
+  // 비례 count — isProp 이거나 fac에 '비례'가 있는 의원 수(중복 없이)
+  let propCount = D.members.filter(m=>m.isProp || (m.fac||[]).includes('비례')).length;
+  facCounts['비례']=propCount;
+  let tierCounts={}; D.members.forEach(m=>{if(m.tier){tierCounts[m.tier]=(tierCounts[m.tier]||0)+1;}});
+  return {partyCounts, facCounts, tierCounts, propCount};
+}
+
+function buildFilters(){
+  let {partyCounts, facCounts, tierCounts} = countBy();
+  let parties=[...new Set(D.members.map(m=>m.p))].filter(Boolean).sort((a,b)=>(partyCounts[b]||0)-(partyCounts[a]||0));
+  // 현재 활성 필터 값은 카운트 0이어도 버튼을 유지한다 — 안 그러면 데이터가 바뀌어
+  // 그 값이 사라졌을 때 필터가 켜진 채로 버튼만 없어져서 해제할 방법이 없어짐(유령 필터).
+  parties=[...new Set([...parties, ...F.party])];
+  $('fParty').innerHTML=parties.map(p=>'<button class="fTag" data-k="party" data-v="'+esc(p)+'" title="'+esc(p)+'"><span style="width:9px;height:9px;border-radius:50%;background:'+(PARTY_COLOR[p]||'#888')+';display:inline-block"></span>'+esc(PARTY_SHORT[p]||p)+' <span class="cnt">'+(partyCounts[p]||0)+'</span></button>').join('');
+  // 계파: 첫 번째는 비례 고정, 나머지는 기존 fac + local + 현재 활성 필터
+  let local=getLocal(); let localFacs=Object.values(local).flatMap(o=>o.fac||[]);
+  let allFac=[...new Set([...D.members.flatMap(m=>m.fac||[]), ...localFacs, ...F.fac])].filter(f=>f!=='비례').sort();
+  let facOrder=['비례', ...allFac];
+  $('fFac').innerHTML=facOrder.map(f=>'<button class="fTag" data-k="fac" data-v="'+esc(f)+'">'+esc(f)+' <span class="cnt">'+(facCounts[f]||0)+'</span></button>').join('');
+  // 티어 = 라디오(단일 선택), 기본 '전체'
+  $('fTier').innerHTML='<button class="tierRadio" data-v="">전체</button>'
+    + ['1','2','3'].map(t=>'<button class="tierRadio" data-v="'+t+'">티어 '+t+' <span class="cnt">'+(tierCounts[t]||0)+'</span></button>').join('');
+  $('fTier').querySelectorAll('.tierRadio').forEach(btn=>{
+    let v=btn.dataset.v;
+    btn.classList.toggle('on', v==='' ? F.tier.length===0 : F.tier.includes(v));
+    btn.onclick=function(){
+      hasFiltered=true;
+      F.tier = v==='' ? [] : [v];
+      buildFilters();
+      draw();
+    };
+  });
+  document.querySelectorAll('.fTag').forEach(btn=>{
+    let k=btn.dataset.k, v=btn.dataset.v;
+    if(!k||!Array.isArray(F[k])) return;   // stray .fTag 방어 (syncFilterButtons와 동일)
+    btn.classList.toggle('on', F[k].includes(v));
+    btn.onclick=function(){
+      hasFiltered=true;
+      let arr=F[k];let idx=arr.indexOf(v);if(idx>=0)arr.splice(idx,1);else arr.push(v);
+      btn.classList.toggle('on',arr.includes(v));
+      buildFilters();   // 활성 필터 해제 시 카운트0 유령 버튼도 같이 정리되도록 재빌드
+      draw();
+    };
+  });
+}
+
+function pick(){
+  let q=(F.q||'').toLowerCase().trim();
+  return D.members.filter(m=>{
+    if(F.party.length&&!F.party.includes(m.p))return false;
+    if(F.fac.length){
+      // 비례 특별 처리
+      let has=false;
+      for(let f of F.fac){
+        if(f==='비례'&&m.isProp){has=true;break;}
+        if((m.fac||[]).includes(f)){has=true;break;}
+      }
+      if(!has)return false;
+    }
+    if(F.tier.length&&!F.tier.includes(String(m.tier||'')))return false;
+    if(F.rg.length&&!F.rg.includes(m.rg))return false;
+    if(F.sido.length){
+      let sd=getSido(m.rg,m.isProp);
+      if(!sd || !F.sido.includes(sd))return false;
+    }
+    if(!memberInRegion(m))return false;
+    if(q){let hay=[m.nm,m.p,m.rg,m.region,m.comm,(m.fac||[]).join(','),m.memo,m.isProp?'비례':'' ].join(' ').toLowerCase();if(!hay.includes(q))return false;}
+    return true;
+  });
+}
+
+function tierCircle(t){if(!t)return''; return String(t);}
+
+function syncFilterButtons(){
+  document.querySelectorAll('.fTag').forEach(btn=>{
+    let k=btn.dataset.k, v=btn.dataset.v;
+    if(!k||!Array.isArray(F[k])) return;
+    btn.classList.toggle('on', F[k].includes(v));
+  });
+  document.querySelectorAll('#fTier .tierRadio').forEach(btn=>{
+    let v=btn.dataset.v;
+    btn.classList.toggle('on', v==='' ? F.tier.length===0 : F.tier.includes(v));
+  });
+}
+let _lastFilterSig='';
+function getFilterSig(){return JSON.stringify(F)+'|'+(F.q||'')+'|'+F.sido.join(',');}
+function draw(){
+  syncFilterButtons();
+  let isFiltered = isAnyFilter();
+  let list = isFiltered ? pick() : [];
+  $('totalCount').textContent='전체 '+D.members.length+'명';
+  $('statCount').textContent=list.length;
+  // 디폴트 전원 체크: 필터가 바뀌면 전체 선택
+  let sig=getFilterSig();
+  if(isFiltered && list.length>0){
+    if(sig!==_lastFilterSig){
+      SEL=new Set(list.map(m=>m.row));
+      _userManuallyCleared=false;
+    }else if(SEL.size===0 && !_userManuallyCleared){
+      SEL=new Set(list.map(m=>m.row));
+    }
+    _lastFilterSig=sig;
+  }
+  if(!isFiltered){
+    SEL.clear();
+    _lastFilterSig='';
+    _userManuallyCleared=false;
+  }
+  $('filterMsg').textContent = '';
+  // ── 액션바 구성: [결과 N명] · [전체선택] ‖ [선택 대상 액션] · [포스팅 보기] ······ [필터 초기화] ──
+  let existingReset = document.getElementById('sidoResetBtn');
+  if(existingReset) existingReset.remove();
+  let bulk=$('bulkEdit');
+  if(isFiltered && list.length>0){
+    _bulkTotal = list.length;
+    let n=SEL.size, allSel=(n===list.length);
+    bulk.style.display='flex';
+    bulk.innerHTML=
+        '<span class="bulkDiv"></span>'
+      + '<label class="bulkSelToggle"><input type="checkbox" id="bulkAllChk"'+(allSel?' checked':'')+'> 전체 <b id="bulkSelN">'+n+'</b>/'+list.length+'</label>'
+      + '<span class="bulkDiv"></span>'
+      + '<span class="bulkActs'+(n===0?' off':'')+'" id="bulkActs">'
+      +   '<input id="bulkTagInput" class="bulkTagIn" placeholder="태그 추가">'
+      +   '<button class="btn sm" id="bulkTagBtn">추가</button>'
+      +   '<select id="bulkTierSel"><option value="">티어 지정…</option><option value="1">티어 1</option><option value="2">티어 2</option><option value="3">티어 3</option><option value="__clear__">티어 없음으로</option></select>'
+      + '</span>'
+      + '<button class="btn primary" id="bulkFeedBtn">포스팅 보기 '+n+'</button>';
+    $('bulkAllChk').onclick=function(e){ e.stopPropagation(); if(SEL.size===list.length){ SEL.clear(); _userManuallyCleared=true; }else{ SEL=new Set(list.map(m=>m.row)); _userManuallyCleared=false; } draw(); };
+    let doTag=function(){let v=$('bulkTagInput').value.trim();if(!v)return;let tags=v.split(',').map(s=>s.trim()).filter(Boolean);if(!tags.length)return;D.members.forEach(m=>{if(SEL.has(m.row)){let set=new Set([...(m.fac||[]),...tags]);m.fac=[...set]; lastChangedRows.add(String(m.row)); dirtyRows.add(String(m.row));}});saveLocal(); buildFilters(); draw(); };
+    $('bulkTagBtn').onclick=doTag;
+    $('bulkTagInput').onkeydown=function(e){ if(e.key==='Enter'){ e.preventDefault(); doTag(); } };
+    $('bulkTierSel').onchange=function(){ let raw=this.value; if(raw==='') return; if(raw==='__clear__' && !confirm('선택한 '+SEL.size+'명의 티어를 모두 비울까요?')){ this.value=''; return; } let v = raw==='__clear__' ? '' : raw; D.members.forEach(m=>{if(SEL.has(m.row)){m.tier=v; lastChangedRows.add(String(m.row)); dirtyRows.add(String(m.row));}});saveLocal();draw(); };
+    $('bulkFeedBtn').onclick=function(){updateFeed();};
+  }else{
+    bulk.style.display='none';
+  }
+  if(isFiltered){
+    let btn=document.createElement('button');
+    btn.id='sidoResetBtn';
+    btn.className='sidoResetBtn';
+    btn.textContent='필터초기화';
+    btn.onclick=function(e){e.stopPropagation();homeReset();};
+    $('stat').appendChild(btn);
+  }
+  if(!isFiltered){
+    $('grid').innerHTML='<div class="emptyMsg">필터를 선택하세요<br><span style="font-size:12px">정당·태그·티어·검색·시도 중 하나를 선택하면 의원 카드가 나타납니다<br>태그의 첫 번째 <b>비례</b>는 비례대표를 고정으로 보여줍니다</span></div>';
+    return;
+  }
+  if(list.length===0){
+    $('grid').innerHTML='<div class="emptyMsg">해당 필터에 일치하는 의원이 없습니다</div>';
+    return;
+  }
+  let html=list.map(m=>{
+    let partyColor=PARTY_COLOR[m.p]||'#888';
+    // SNS icons - fixed: X and Wiki
+    let fbIcon=m.fb?'<a class="fb" href="'+m.fb+'" target="_blank" data-stop title="Facebook" onclick="event.stopPropagation()"><svg viewBox="0 0 24 24"><path d="M14 8h3V4h-3c-2.76 0-5 2.24-5 5v3H6v4h3v4h4v-4h3l1-4h-4V9c0-.55.45-1 1-1z"/></svg></a>':'';
+    let xIcon=m.x?'<a class="x" href="'+m.x+'" target="_blank" data-stop title="X" onclick="event.stopPropagation()"><svg viewBox="0 0 24 24"><path d="M18.9 2H22l-6.55 7.48L23 22h-5.95l-4.66-6.09L7.06 22H4l7-8L3.6 2h6.1l4.21 5.5L18.9 2zm-1.04 18h1.67L8.4 3.86H6.58L17.86 20z"/></svg></a>':'';
+    let wikiIcon='<a class="wiki" href="'+esc(m.wiki || ('https://namu.wiki/w/'+encodeURIComponent(m.nm)))+'" target="_blank" data-stop title="나무위키" onclick="event.stopPropagation()">W</a>';
+    let tags=(m.fac||[]).map(f=>'<span class="tag" data-filter-fac="'+esc(f)+'" data-stop>'+esc(f)+'<span class="x" data-row="'+m.row+'" data-fac="'+esc(f)+'">×</span></span>').join('');
+    if(m.isProp){ tags = '<span class="tag" style="background:var(--blue-soft);color:var(--ink);border-color:transparent" data-filter-fac="비례" data-stop>비례</span>' + tags; }
+    let checked=SEL.has(m.row);
+    let phStyle=m.ph?' style="background-image:url(\''+esc(m.ph)+'\')"':''; 
+    let phText=m.ph?'':'<span>'+esc((m.nm||'')[0]||'')+'</span>';
+    // rgHtml 로직 - 최소 수정, 중괄호/따옴표 꼬임 방지
+    let parsed=parseRg(m.rg, m.isProp);
+    let rgHtml='';
+    if(parsed.isProp){
+      rgHtml='<span class="rgProp" data-stop data-flip-only>'+esc('비례대표')+'</span>';
+    }else if(parsed.sido && parsed.rest){
+      rgHtml='<span class="rgSido" data-act="sido" data-v="'+esc(parsed.sido)+'">'+esc(parsed.sido)+'</span> | <span class="rgRest" data-stop data-flip-only>'+esc(parsed.rest)+'</span>';
+    }else if(parsed.sido && !parsed.rest){
+      rgHtml='<span class="rgSido" data-act="sido" data-v="'+esc(parsed.sido)+'">'+esc(parsed.sido)+'</span>';
+    }else{
+      rgHtml='<span class="rgRest" data-stop data-flip-only>'+esc(parsed.rest||'')+'</span>';
+    }
+    return '<div class="flip'+(checked?' on':'')+'" data-row="'+m.row+'" style="--party-color:'+partyColor+'"><div class="flipInner"><div class="cardFront"><div class="ph"'+phStyle+'>'+phText+'</div><div class="main"><div class="row1"><span class="nm">' + esc(m.nm) + ' <span class="tierCircle" style="display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:var(--ink);color:#fff;font-size:12px;font-weight:700;margin-left:6px;vertical-align:middle">' + tierCircle(m.tier) + '</span></span></div><div class="sns">' + fbIcon + xIcon + wikiIcon + '</div><div class="row2">'+rgHtml+' · <span class="click" data-act="comm" data-v="'+esc(m.comm)+'" data-stop>'+esc(m.comm)+'</span></div><div class="tags">'+tags+'</div></div>'+'<input type="checkbox" class="rowCheck" '+(checked?'checked':'')+' style="position:absolute;top:8px;right:8px;width:16px;height:16px;z-index:3">'+'</div><div class="cardBack"><div class="backName">'+esc(m.nm)+' '+(m.isProp?'(비례)':'')+'</div><div class="field" style="gap:6px"><label>태그</label><input data-field="fac" data-row="'+m.row+'" value="'+esc((m.fac||[]).join(', '))+'" placeholder="쉼표" style="flex:1;min-width:0"><label style="width:28px;flex-shrink:0">티어</label><select data-field="tier" data-row="'+m.row+'" style="width:70px;flex-shrink:0"><option value="">-</option><option value="1" '+(m.tier=='1'?'selected':'')+'>1 ①</option><option value="2" '+(m.tier=='2'?'selected':'')+'>2 ②</option><option value="3" '+(m.tier=='3'?'selected':'')+'>3 ③</option></select></div><div class="field"><label style="width:36px">FB</label><input data-field="fb" data-row="'+m.row+'" value="'+esc(m.fb||'')+'" placeholder="https://facebook.com/..."></div><div class="field"><label style="width:36px">X</label><input data-field="x" data-row="'+m.row+'" value="'+esc(m.x||'')+'" placeholder="https://x.com/..."></div><div class="field"><label style="width:36px">위키</label><input data-field="wiki" data-row="'+m.row+'" value="'+esc(m.wiki||'')+'" placeholder="비우면 나무위키 자동(이름)"></div></div></div></div>';
+  }).join('');
+  $('grid').innerHTML=html;
+  if(window.injectFbIconsUniversal) window.injectFbIconsUniversal();
+  $('grid').querySelectorAll('.flip').forEach(el=>{el.onclick=function(e){if(e.target.closest('[data-stop]')){ // flip-only 처리
+        if(e.target.closest('[data-flip-only]')){
+          el.classList.toggle('flipped');
+        }
+        return;
+      }
+      if(e.target.closest('input,select,textarea,button,.tag'))return;
+      // 뒷면(편집면)에서 입력필드 줄(.field)·라벨을 클릭해도 다시 뒤집히지 않게
+      if(e.target.closest('.cardBack .field, .cardBack label'))return;
+      el.classList.toggle('flipped');
+    };
+    // 즉시 저장: 태그/티어/메모/FB/X 변경 시 바로 saveLocal - V5 원천 수정
+    let row=parseInt(el.dataset.row,10);
+    let mem=D.members.find(mm=>mm.row===row);
+    if(mem){
+      let facI=el.querySelector('[data-field="fac"]');
+      let tierS=el.querySelector('[data-field="tier"]');
+      let memoT=el.querySelector('[data-field="memo"]');
+      let fbI=el.querySelector('[data-field="fb"]');
+      let xI=el.querySelector('[data-field="x"]');
+      let wikiI=el.querySelector('[data-field="wiki"]');
+      if(facI){ facI.addEventListener('change', function(){ mem.fac=this.value.split(',').map(s=>s.trim()).filter(Boolean); saveLocal(row); buildFilters(); draw(); }); facI.addEventListener('blur', function(){ mem.fac=this.value.split(',').map(s=>s.trim()).filter(Boolean); saveLocal(row); buildFilters(); draw(); }); }
+      if(tierS){ tierS.addEventListener('change', function(){ mem.tier=this.value; saveLocal(row); let nm=el.querySelector('.nm'); if(nm){ /* tierCircle update next draw */ } buildFilters(); draw(); }); }
+      if(memoT){ memoT.addEventListener('change', function(){ mem.memo=this.value; saveLocal(row); }); memoT.addEventListener('blur', function(){ mem.memo=this.value; saveLocal(row); }); }
+      if(fbI){ fbI.addEventListener('change', function(){ mem.fb=this.value.trim(); saveLocal(row); buildFilters(); draw(); }); fbI.addEventListener('blur', function(){ mem.fb=this.value.trim(); saveLocal(row); buildFilters(); draw(); }); }
+      if(xI){ xI.addEventListener('change', function(){ mem.x=this.value.trim(); saveLocal(row); buildFilters(); draw(); }); xI.addEventListener('blur', function(){ mem.x=this.value.trim(); saveLocal(row); buildFilters(); draw(); }); }
+      if(wikiI){ const h=function(){ mem.wiki=this.value.trim(); saveLocal(row); draw(); }; wikiI.addEventListener('change', h); wikiI.addEventListener('blur', h); }
+    }
+    });
+  $('grid').querySelectorAll('[data-act]').forEach(el=>{el.onclick=function(e){e.stopPropagation();let act=el.dataset.act,v=el.dataset.v;
+      if(act==='sido'){
+        hasFiltered=true;
+        F.sido=[v];
+        draw();
+      }else if(act==='rg'){
+        hasFiltered=true;F.rg=[v];F.q='';draw();
+      }else{
+        hasFiltered=true;F.q=v;$('q').value=v;draw();
+      }
+    };});
+  $('grid').querySelectorAll('[data-filter-fac]').forEach(el=>{el.onclick=function(e){e.stopPropagation();hasFiltered=true;let v=el.dataset.filterFac;if(!F.fac.includes(v))F.fac.push(v);document.querySelectorAll('#fFac .fTag').forEach(b=>b.classList.toggle('on',F.fac.includes(b.dataset.v)));draw();};});
+  $('grid').querySelectorAll('.tag .x').forEach(el=>{el.onclick=function(e){e.stopPropagation();let row=parseInt(el.dataset.row,10);let fac=el.dataset.fac;let mem=D.members.find(mm=>mm.row===row);if(mem){let idx=mem.fac.indexOf(fac);if(idx>=0){mem.fac.splice(idx,1); lastChangedRows.add(String(row)); saveLocal(row); buildFilters(); draw();}};};});
+  $('grid').querySelectorAll('.flip input[type=checkbox]').forEach(cb=>{cb.addEventListener('click',function(e){e.stopPropagation();let row=parseInt(cb.closest('.flip').dataset.row,10);if(cb.checked)SEL.add(row);else SEL.delete(row);cb.closest('.flip').classList.toggle('on',cb.checked);
+    syncBulkBar();
+    let midBar=$('midBar'); if(midBar){let spans=midBar.querySelectorAll('b'); if(spans.length>=2) spans[1].textContent=SEL.size;}
+  });});
+}
+// --- 검색 + X ---
+(function(){
+  let qEl=document.getElementById('q'); let sBtn=document.getElementById('searchBtn'); let clearBtn=document.getElementById('qClear');
+  function updateClearVis(){ if(!clearBtn||!qEl) return; clearBtn.style.display = qEl.value.trim()!=='' ? 'flex':'none'; }
+  function clearSearch(){ if(qEl) qEl.value=''; F.q=''; let onlyQ=F.party.length===0&&F.fac.length===0&&F.tier.length===0&&F.sido.length===0; if(onlyQ){ hasFiltered=false; _lastFilterSig=''; } updateClearVis(); draw(); qEl&&qEl.focus(); }
+  if(qEl){
+    let _qTimer=null;
+    qEl.addEventListener('input', function(e){
+      F.q=e.target.value; if(F.q.trim()!=='') hasFiltered=true;
+      updateClearVis();
+      if(_qTimer) clearTimeout(_qTimer);
+      _qTimer=setTimeout(()=>{ _qTimer=null; draw(); }, 250);
+    });
+    qEl.addEventListener('keydown', function(e){ if(e.key==='Enter'){ if(_qTimer){clearTimeout(_qTimer);_qTimer=null;} F.q=e.target.value; if(F.q.trim()!=='') hasFiltered=true; updateClearVis(); draw(); } if(e.key==='Escape'){ clearSearch(); } });
+    setTimeout(updateClearVis, 100);
+  }
+  if(clearBtn) clearBtn.onclick=function(e){ e.stopPropagation(); clearSearch(); };
+  if(sBtn) sBtn.onclick=function(){ F.q=document.getElementById('q')?document.getElementById('q').value:''; if(F.q.trim()!=='') hasFiltered=true; updateClearVis(); draw(); document.getElementById('q')&&document.getElementById('q').focus(); };
+  window._clearSearch=clearSearch;
+})();
+
+
+  // V4 - 앞뒤 페북 로고 강제 - 하나라도 안 뜨면 전체 실패이므로
+  function injectFbIconsUniversal(){
+    // 앞면 로고 강제 표시
+    document.querySelectorAll('.cardFront .sns a.fb').forEach(a=>{
+      a.style.display='flex';
+      a.style.opacity='1';
+      a.style.visibility='visible';
+    });
+    // 뒷면 로고 주입
+    document.querySelectorAll('.flip').forEach(fl=>{
+      let row = fl.dataset.row;
+      if(!row) return;
+      let mem = D.members.find(mm=>String(mm.row)===String(row));
+      if(!mem || !mem.fb) return;
+      let backName = fl.querySelector('.cardBack .backName');
+      if(backName && !backName.querySelector('.fbBackIcon')){
+        let a = document.createElement('a');
+        a.href = mem.fb;
+        a.target = '_blank';
+        a.className = 'fbBackIcon';
+        a.style.cssText = 'width:20px;height:20px;background:#1877F2;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;margin-left:6px;vertical-align:middle';
+        a.title = 'Facebook';
+        a.setAttribute('data-stop','');
+        a.innerHTML = '<svg viewBox="0 0 24 24" style="width:12px;height:12px;fill:#fff"><path d="M14 8h3V4h-3c-2.76 0-5 2.24-5 5v3H6v4h3v4h4v-4h3l1-4h-4V9c0-.55.45-1 1-1z"/></svg>';
+        a.onclick = function(e){e.stopPropagation();};
+        backName.appendChild(a);
+      }
+    });
+  }
+  window.injectFbIconsUniversal = injectFbIconsUniversal;
+
+document.addEventListener('click',function(e){
+  let flipped=document.querySelectorAll('.flip.flipped');
+  if(!flipped.length)return;
+  if(e.target.closest('.cardBack input, .cardBack select, .cardBack textarea'))return;
+  flipped.forEach(fl=>{
+    if(!fl.contains(e.target)){
+      let row=parseInt(fl.dataset.row,10);
+      let mem=D.members.find(mm=>mm.row===row);
+      if(mem){
+        let facInput=fl.querySelector('[data-field="fac"]');
+        let tierSel=fl.querySelector('[data-field="tier"]');
+        let memoInput=fl.querySelector('[data-field="memo"]');
+        let fbInput=fl.querySelector('[data-field="fb"]');
+        let xInput=fl.querySelector('[data-field="x"]');
+        if(facInput)mem.fac=facInput.value.split(',').map(s=>s.trim()).filter(Boolean);
+        if(tierSel)mem.tier=tierSel.value;
+        if(memoInput)mem.memo=memoInput.value;
+        if(fbInput)mem.fb=fbInput.value.trim();
+        if(xInput)mem.x=xInput.value.trim();
+        saveLocal(row);
+      }
+      fl.classList.remove('flipped');
+    }
+  });
+}, true);
+
+// Facebook iframe 높이 자동 조절 - 내부 스크롤 제거 핵심
+window.addEventListener('message', function(e){
+  try{
+    if(!e.origin.includes('facebook.com')) return;
+    let data=e.data;
+    if(typeof data==='string' && data.includes('height')){
+      // data like {type:'resize', height:xxx}
+    }
+    // Facebook SDK가 보내는 resize 메시지 파싱
+    if(data && data.height){
+      document.querySelectorAll('.feedClip iframe').forEach(ifr=>{
+        if(ifr.contentWindow===e.source){
+          let newH=Math.min(1200, Math.max(300, parseInt(data.height,10)+40));
+          ifr.style.height=newH+'px';
+          let clip=ifr.closest('.feedClip');
+          if(clip) clip.style.height=newH+'px';
+        }
+      });
+    }
+  }catch(err){}
+});
+
+
+
+
+
+
+let _preFeedScrollY=null;   // 포스팅 보기 직전 스크롤 위치
+
+function closeFeed(){
+  let bf=$('bottomFeed'); if(bf) bf.style.display='none';
+  if(_preFeedScrollY!==null){
+    let y=_preFeedScrollY; _preFeedScrollY=null;
+    window.scrollTo({top:y, behavior:'smooth'});
+  }
+}
+
+function scrollToFeed(){
+  let bf=$('bottomFeed'); if(!bf) return;
+  if(_preFeedScrollY===null) _preFeedScrollY=window.pageYOffset;
+  let hdr=document.querySelector('.header');
+  let off=hdr?hdr.getBoundingClientRect().height:0;
+  // 레이아웃이 잡힌 뒤 위치를 계산해야 정확하다
+  requestAnimationFrame(()=>{
+    let top=bf.getBoundingClientRect().top+window.pageYOffset-off;
+    window.scrollTo({top:Math.max(0,top),behavior:'smooth'});
+  });
+}
+
+// 개인 계정 카드의 "최신 글" 영역을 Worker(/fbposts)에서 채운다.
+// FB_COOKIE 미설정이면 조용히 버튼만 남긴다. 동시 요청 폭주 방지로 살짝 시차.
+async function loadProfilePosts(){
+  let boxes=[...document.querySelectorAll('#feedList .profilePosts[data-fb-vanity]')];
+  for(let i=0;i<boxes.length;i++){
+    let box=boxes[i], v=box.dataset.fbVanity;
+    if(!v){ box.innerHTML='<span class="ppNote">주소를 인식하지 못했습니다</span>'; continue; }
+    if(i>0) await new Promise(r=>setTimeout(r,450));
+    try{
+      let res=await fetch(FB_WORKER+'/fbposts?u='+encodeURIComponent(v));
+      let j=await res.json();
+      if(j && j.needsCookie){ box.innerHTML=''; continue; }
+      let posts=(j && j.posts) || [];
+      if(!posts.length){ box.innerHTML='<span class="ppNote">최근 글을 가져오지 못했습니다</span>'; continue; }
+      box.innerHTML='<div class="profilePostsHead">최신 글</div>'
+        + posts.slice(0,5).map(p=>'<div class="profilePost">'+esc(p.text||'')+'</div>').join('');
+    }catch(e){ box.innerHTML='<span class="ppNote">최근 글을 가져오지 못했습니다</span>'; }
+  }
+}
+
+let feedMode='fb';   // 'fb' | 'x' — 포스팅 보기 패널 안의 페북/X 서브탭
+function updateFeed(){
+  let bf=$('bottomFeed');
+  if(SEL.size==0){bf.style.display='none';return;}
+  let freshOpen = (bf.style.display!=='block');
+  if(freshOpen) resetXFeedState();
+  $('feedList').innerHTML =
+      '<div id="recentTitle"><span class="feedModeTabs">'
+    +   '<button class="fmTab'+(feedMode==='fb'?' on':'')+'" data-mode="fb">페북 보기</button>'
+    +   '<button class="fmTab'+(feedMode==='x'?' on':'')+'" data-mode="x">X 보기</button>'
+    + '</span><button class="btn" onclick="closeFeed()">닫기</button></div>'
+    + '<div id="feedBody"></div>';
+  bf.style.display='block';
+  scrollToFeed();
+  $('feedList').querySelectorAll('.fmTab').forEach(btn=>{
+    btn.onclick=()=>{ feedMode=btn.dataset.mode; updateFeed(); };
+  });
+  if(feedMode==='x') renderXFeed(); else renderFbFeed();
+}
+
+function renderFbFeed(){
+  let body=$('feedBody');
+  let hiddenMems=getHiddenMembers();
+  let selected=D.members.filter(m=>SEL.has(m.row) && !hiddenMems[m.row] && !isFeedHidden(m));
+  let selWithFb=selected.filter(m=>(m.fb||'').trim()!=='');
+  let pageMembers=selWithFb.filter(m=>isEmbeddableFb(m.fb));
+  let profileMembers=selWithFb.filter(m=>!isEmbeddableFb(m.fb));
+  if(selWithFb.length===0){
+    body.innerHTML='<div class="xFeedEmpty">Facebook 없음</div>';
+    return;
+  }
+  let hideBtns=(m)=>'<span class="hideBtnGroup"><button class="hideBtn" data-hide-row="'+m.row+'" data-hide-ms="0" title="이번 세션에서만 안 뜸">일단 빼기</button><button class="hideBtn" data-hide-row="'+m.row+'" data-hide-ms="86400000" title="24시간 후 자동 복귀">하루 안 뜨기</button><button class="hideBtn" data-hide-row="'+m.row+'" data-hide-ms="2592000000" title="30일 후 자동 복귀">한 달 안 뜨기</button></span>';
+  let headHtml=(m)=>'<div class="memberCardHead"><span>'+esc(m.nm)+' <span style="font-size:11px">'+tierCircle(m.tier)+'</span> <span style="font-size:12px;color:#6B7280;font-weight:400">'+esc(m.p)+'</span></span>'+hideBtns(m)+'</div>';
+  let titleHtml='<div class="feedSubTitle">선택한 의원 : '+selWithFb.length+'명'+(profileMembers.length>0?' <span style="font-weight:400;color:#8B95A1;font-size:12px">· 개인계정 '+profileMembers.length+'명 포함</span>':'')+'</div>';
+  let pageCards=pageMembers.slice(0,24).map(m=>{
+    return '<div class="memberCard" data-member-row="'+m.row+'" data-fb-href="'+esc(m.fb)+'">'+headHtml(m)
+      + '<div class="memberCardBody"><div class="mcbFallback"><span class="mcbMsg">Facebook 불러오는 중…</span></div>'
+      +   '<div class="fb-page" data-href="'+esc(m.fb)+'" data-tabs="timeline" data-width="500" data-height="1000" data-small-header="true" data-adapt-container-width="true" data-hide-cover="true" data-show-facepile="false"><blockquote cite="'+esc(m.fb)+'" class="fb-xfbml-parse-ignore"><a href="'+esc(m.fb)+'">'+esc(m.nm)+'</a></blockquote></div>'
+      + '</div>'
+      + '<div class="memberCardFoot"><a href="'+esc(m.fb)+'" target="_blank" rel="noopener">페이스북에서 열기 ↗</a></div>'
+      + '</div>';
+  }).join('');
+  let profileCards=profileMembers.slice(0,24).map(m=>{
+    return '<div class="memberCard profileCard" data-member-row="'+m.row+'" data-fb-href="'+esc(m.fb)+'">'+headHtml(m)
+      + '<div class="profileCardBody">'
+      +   '<div class="profileNotice">이 인물은 팬페이지가 아닌 <b>개인 계정</b>으로 피드를 불러올 수 없습니다.</div>'
+      +   '<a class="profileVisitBtn" href="'+esc(m.fb)+'" target="_blank" rel="noopener">직접 피드 방문하기 ↗</a>'
+      +   '<div class="profilePosts" data-fb-vanity="'+esc(fbVanity(m.fb))+'"><span class="ppLoading">최신 글 불러오는 중…</span></div>'
+      + '</div></div>';
+  }).join('');
+  body.innerHTML=titleHtml+'<div class="bottomFeedInner"><div class="masonry2">'+pageCards+profileCards+'</div></div>';
+  loadProfilePosts();
+
+  if(window.FB && FB.XFBML){ FB.XFBML.parse(body); }
+  else{ setTimeout(()=>{ if(window.FB && FB.XFBML) FB.XFBML.parse(body); },800); }
+
+  // FB 임베드는 크로스오리진이라 "빈 iframe"과 "정상 iframe"을 구분할 수 없다.
+  // 12초 뒤: 로딩 문구를 "못 불러옴"으로 바꾸고, iframe 자체가 안 생긴 카드는 축소한다.
+  // 정상 카드는 FB iframe(z-index 1)이 이 영역을 덮으므로 사용자에겐 안 보인다.
+  // 어느 경우든 카드 하단의 "페이스북에서 열기 ↗" 링크로 원문에 갈 수 있다.
+  if(window._feedFallbackTimer) clearTimeout(window._feedFallbackTimer);
+  window._feedFallbackTimer = setTimeout(()=>{
+    body.querySelectorAll('.memberCard:not(.profileCard)').forEach(card=>{
+      let mcb = card.querySelector('.mcbFallback');
+      if(mcb) mcb.innerHTML = '<div class="mcbFail">피드를 불러오지 못했습니다<br>페이스북 로그인이 필요하거나 개인 계정일 수 있습니다</div>';
+      let fbPage = card.querySelector('.fb-page');
+      if(!fbPage || !fbPage.querySelector('iframe')) card.classList.add('mcbFailed');
+    });
+  }, 12000);
+
+
+  body.querySelectorAll('.checkedBtn').forEach(btn=>{
+    btn.onclick=function(){
+      let row=parseInt(btn.dataset.memberRow,10);
+      let hiddenMem=getHiddenMembers(); hiddenMem[row]=1; localStorage.setItem(HIDDEN_MEMBERS_KEY, JSON.stringify(hiddenMem));
+      let card=btn.closest('.memberCard');
+      if(card){ card.style.opacity='0'; setTimeout(()=>{ card.style.display='none'; },200); }
+    };
+  });
+  // ─── 일단 빼기 / 하루 / 한 달 버튼 배선 ───
+  body.querySelectorAll('.hideBtn').forEach(btn=>{
+    btn.onclick=function(){
+      let row=parseInt(btn.dataset.hideRow,10);
+      let ms=parseInt(btn.dataset.hideMs,10);
+      hideFeedForDuration(row, ms);
+      let card=btn.closest('.memberCard');
+      if(card){ card.style.opacity='0'; setTimeout(()=>{ card.style.display='none'; },200); }
+    };
+  });
+  // ─── ＋스크랩 버튼 배선 ───
+
+}
+
+/* ===== X 보기 — 요청/처리 큐 방식 (정적 호스팅이라 즉시 검색 불가) =====
+   sns_u/{SNS_NS}/x_requests에 요청을 쌓으면 컴퓨터에서 도는 watch_requests.py가
+   집어서 처리하고 sns_u/{SNS_NS}/x_reports에 결과를 쓴다. 여기선 그 상태를 폴링. */
+// x-search-worker: Firefox에서 뽑아 Worker Secret으로 저장해둔 X 로그인 세션으로
+// 즉시 검색해주는 Cloudflare Worker. 로컬 스크립트도, 대기도 필요 없다.
+const X_SEARCH_WORKER_URL = 'https://x-search-worker.YOUR-ACCOUNT.workers.dev/search';
+
+let xFeedState=null;   // {status:'form'|'loading'|'done'|'error', topic, days, result, error}
+function resetXFeedState(){
+  xFeedState={status:'form'};
+}
+
+function renderXFeed(){
+  let body=$('feedBody');
+  if(!xFeedState) resetXFeedState();
+  // 공방은 여야·계파를 넘나든다 — 카드 필터/체크선택은 "포스팅 보기"를 열 때 화면에
+  // 어떤 사람이 보였는지일 뿐, X 검색 대상은 항상 X계정 등록된 의원 전원으로 한다.
+  // (그래야 필터링한 쪽에서만 검색해서 상대 진영 발언을 놓치는 일이 없다.)
+  let hiddenMems=getHiddenMembers();
+  let selWithX=D.members.filter(m=>!hiddenMems[m.row] && !isFeedHidden(m) && (m.x||'').trim()!=='');
+
+  if(selWithX.length===0){
+    body.innerHTML='<div class="xFeedEmpty">X 계정이 등록된 의원이 아직 없습니다.<br>카드 뒷면에서 X 링크를 입력해주세요.</div>';
+    return;
+  }
+
+  // 검색창은 로딩/결과/에러 어떤 상태든 항상 위에 떠 있고, 지금 검색어가 채워져 있어서
+  // 바로 고쳐서 다시 검색할 수 있다 ("새로 검색" 버튼으로 따로 초기화할 필요 없음).
+  let barHtml='<div class="xFeedAskRow">'
+    +   '<input id="xFeedTopicInput" placeholder="키워드 / 이슈 (예: 탄핵)" value="'+esc(xFeedState.topic||'')+'">'
+    +   '<input id="xFeedDaysInput" type="number" value="'+esc(String(xFeedState.days||7))+'" min="1" style="width:60px">'
+    +   '<span>일</span>'
+    +   '<button class="btn primary" id="xFeedAskBtn">'+(xFeedState.status==='loading'?'검색 중…':'검색')+'</button>'
+    +   '<span class="xFeedBarNote">대상 '+selWithX.length+'명</span>'
+    + '</div>'
+    + '<div class="xFeedErr" id="xFeedErr" style="display:none"></div>';
+
+  let contentHtml='';
+  if(xFeedState.status==='form'){
+    contentHtml='<p class="xFeedNote">키워드를 입력하면 최근 게시글 중 언급된 것만 계파별로 정리해 보여줍니다.</p>';
+  }else if(xFeedState.status==='loading'){
+    contentHtml='<div class="xFeedPending"><div class="xFeedSpinner"></div>"'+esc(xFeedState.topic)+'" 검색 중… ('
+      + esc(String(xFeedState.targetCount))+'명, 보통 5~15초)</div>';
+  }else if(xFeedState.status==='done'){
+    contentHtml=xFeedResultHtml(xFeedState.result);
+  }else if(xFeedState.status==='error'){
+    let errMsg = /시크릿이 설정/.test(xFeedState.error||'')
+      ? 'X 로그인 정보가 아직 연결 안 됐습니다 (컴퓨터에서 Worker에 AUTH_TOKEN/CT0 설정 필요)'
+      : '검색 실패: '+(xFeedState.error||'');
+    contentHtml='<div class="xFeedEmpty">'+esc(errMsg)+'</div>';
+  }
+  body.innerHTML='<div class="xFeedAsk">'+barHtml+'</div>'+contentHtml;
+
+  let topicInput=$('xFeedTopicInput'), daysInput=$('xFeedDaysInput'), askBtn=$('xFeedAskBtn'), errBox=$('xFeedErr');
+  let loading=(xFeedState.status==='loading');
+  topicInput.disabled=loading; daysInput.disabled=loading; askBtn.disabled=loading;
+  let showErr=(msg)=>{
+    errBox.textContent=msg; errBox.style.display='block';
+    topicInput.classList.add('errShake');
+    setTimeout(()=>topicInput.classList.remove('errShake'), 400);
+    topicInput.focus();
+  };
+  let submit=function(){
+    let topic=topicInput.value.trim();
+    let days=parseInt(daysInput.value,10)||7;
+    if(!topic){ showErr('키워드를 먼저 입력해주세요.'); return; }
+    runXFeedSearch(selWithX, topic, days);
+  };
+  askBtn.onclick=submit;
+  topicInput.onkeydown=function(e){ if(e.key==='Enter'){ e.preventDefault(); submit(); } };
+  topicInput.oninput=function(){ if(errBox.style.display!=='none') errBox.style.display='none'; };
+
+  if(xFeedState.status==='done'){
+    let aiBtn=document.getElementById('xfAiBtn');
+    if(aiBtn) aiBtn.onclick=function(){ runXFeedAiSummary(xFeedState.result); };
+  }
+}
+
+// Worker는 요청 하나당 25명까지만 처리한다(Cloudflare 하위요청 상한). 대상이 그보다 많으면
+// 여러 번 나눠 호출해서 합쳐야 하는데, 그러면 "이 청크 안에서만" 멘션을 본 서버가
+// 다른 청크에 있는 동료를 향한 멘션(공방)을 놓친다 — 그래서 directed_at은 전체 명단
+// 기준으로 여기서 다시 계산한다. people.html의 "공방" 탭도 이 함수를 그대로 가져다 쓴다.
+window.searchXChunked = async function(targets, topic, days, chunkSize){
+  chunkSize = chunkSize || 25;
+  const chunks = [];
+  for(let i=0;i<targets.length;i+=chunkSize) chunks.push(targets.slice(i,i+chunkSize));
+  let allPosts = [];
+  const failedAccounts = [];
+  const failedChunks = [];
+  for(const chunk of chunks){
+    try{
+      const res = await fetch(X_SEARCH_WORKER_URL, {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ topic, days, targets: chunk })
+      });
+      const data = await res.json();
+      if(res.ok && Array.isArray(data.posts)) allPosts = allPosts.concat(data.posts);
+      if(res.ok && Array.isArray(data.failed_details)) failedAccounts.push(...data.failed_details);
+      else failedChunks.push(data.error || ('HTTP '+res.status));
+    }catch(e){ failedChunks.push(e.message); }
+  }
+  // 전체 명단 기준으로 directed_at 재계산 (청크 경계를 넘는 멘션도 잡히도록)
+  const byHandle = {};
+  targets.forEach(t=>{
+    let h = (t.x||'').trim();
+    if(h.startsWith('http')) h = h.replace(/\/+$/,'').split('/').pop().replace(/^@/,'');
+    if(h) byHandle[h.toLowerCase()] = t.name;
+  });
+  allPosts.forEach(p=>{
+    const mentioned = p.mentioned_handles || [];
+    p.directed_at = mentioned.filter(m=>byHandle[m]).map(m=>byHandle[m]);
+  });
+  allPosts.sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+  const byFaction = {};
+  allPosts.forEach(p=>{
+    (p.factions&&p.factions.length ? p.factions : ['(계파 미입력)']).forEach(f=>{ byFaction[f]=(byFaction[f]||0)+1; });
+  });
+  const exchanges = allPosts.filter(p=>p.directed_at && p.directed_at.length);
+  return {
+    topic, window_days: days, total_matched_posts: allPosts.length,
+    posts: allPosts, by_faction: byFaction, exchanges,
+    _chunkErrors: failedChunks,
+    failed_accounts: failedAccounts
+  };
+};
+
+async function runXFeedSearch(members, topic, days){
+  let targets=members.map(m=>({ name:m.nm, x:m.x, factions:m.fac||[] }));
+  xFeedState={ status:'loading', topic, days, targetCount:targets.length };
+  renderXFeed();
+  try{
+    let data = await window.searchXChunked(targets, topic, days);
+    if(data._chunkErrors && data._chunkErrors.length && data.posts.length===0){
+      throw new Error(data._chunkErrors[0]);
+    }
+    xFeedState={ status:'done', topic, days, result: data };
+  }catch(e){
+    console.error(e);
+    xFeedState={ status:'error', error: e.message };
+  }
+  renderXFeed();
+}
+
+function xFeedPostCardHtml(p){
+  let arrow=(p.directed_at && p.directed_at.length) ? ' <span class="xfArrow">→ '+esc(p.directed_at.join(', '))+'</span>' : '';
+  let eng=p.engagement||{};
+  let engParts=[];
+  if(eng.likes!=null) engParts.push('좋아요 '+eng.likes);
+  if(eng.reposts!=null) engParts.push('RT '+eng.reposts);
+  if(eng.replies!=null) engParts.push('답글 '+eng.replies);
+  return '<div class="xfPost"><div class="xfPostHead"><b>'+esc(p.name||'')+'</b>'+arrow+'<span class="xfPostDate">'+esc(p.date||'')+'</span></div>'
+    + '<div class="xfPostText">'+esc(p.text||'')+'</div>'
+    + '<div class="xfPostFoot">'+(engParts.length?'<span>'+esc(engParts.join(' · '))+'</span>':'<span></span>')+'<a href="'+esc(p.url||'#')+'" target="_blank" rel="noopener">원문 보기 ↗</a></div></div>';
+}
+
+function xFeedResultHtml(r){
+  if(!r || !r.posts || !r.posts.length){
+    return '<div class="xFeedEmpty">"'+esc((r&&r.topic)||'')+'" 관련 언급을 찾지 못했습니다.</div>';
+  }
+  let byFaction={};
+  r.posts.forEach(p=>{
+    let facs=(p.factions && p.factions.length) ? p.factions : ['(계파 미입력)'];
+    facs.forEach(f=>{ (byFaction[f]=byFaction[f]||[]).push(p); });
+  });
+  let order=Object.keys(byFaction).sort((a,b)=>byFaction[b].length-byFaction[a].length);
+  let exchanges=r.posts.filter(p=>p.directed_at && p.directed_at.length);
+
+  let html='<div class="feedSubTitle">"'+esc(r.topic)+'" 최근 '+esc(String(r.window_days||''))+'일 · 총 '+esc(String(r.total_matched_posts||0))+'건</div>';
+  html+='<div class="xfAiBlock"><button class="btn primary" id="xfAiBtn">🤖 이슈 설명 + 공방 정리 (AI)</button><div id="xfAiResult"></div></div>';
+  if(exchanges.length){
+    html+='<div class="xfSection xfExchange"><div class="xfSectionTitle">동료 의원을 직접 겨냥한 언급 (공방 후보) '+exchanges.length+'건</div>'
+      + exchanges.map(xFeedPostCardHtml).join('') + '</div>';
+  }
+  order.forEach(f=>{
+    html+='<div class="xfSection"><div class="xfSectionTitle">'+esc(f)+' <span class="xfCnt">'+byFaction[f].length+'건</span></div>'
+      + byFaction[f].map(xFeedPostCardHtml).join('') + '</div>';
+  });
+  return html;
+}
+
+// ===== AI 요약: 이슈 설명 + 계파별 공방 정리 (Gemini, 정글2 스크랩 요약과 같은 무료 키 재사용) =====
+// sns-tool.html은 빌드 시 해시 파일명 치환 대상이 아니라(script.mjs 참고) config.js를
+// 외부 참조로 못 쓴다 — 이 파일이 이미 firebaseConfig를 따로 갖고 있는 것과 같은 이유로,
+// Gemini 키도 config.js 값을 그대로 복붙해 둔다(무료 티어 키라 노출 비용 위험 없음 — config.js 주석과 동일).
+// config.js의 geminiApiKey를 바꾸면 여기도 같이 바꿔야 함.
+const GEMINI_API_KEY_XFEED='';
+const GEMINI_MODEL_XFEED='gemini-3.5-flash-lite';
+function geminiXFeedUrl(){
+  return 'https://generativelanguage.googleapis.com/v1beta/models/'+GEMINI_MODEL_XFEED+':generateContent?key='+GEMINI_API_KEY_XFEED;
+}
+function buildXFeedAiPrompt(r){
+  let lines=r.posts.map(p=>{
+    let who=p.name+(p.factions&&p.factions.length?' ('+p.factions.join(',')+')':'')
+      +(p.directed_at&&p.directed_at.length?' → '+p.directed_at.join(', ')+' 향':'');
+    return '- ['+(p.date||'')+'] '+who+': '+(p.text||'').replace(/\s+/g,' ');
+  }).join('\n');
+  return '당신은 정치 뉴스 기사를 쓰는 기자를 돕는 어시스턴트입니다. "'+r.topic+'" 이슈에 대해 국회의원들이 최근 '
+    + (r.window_days||'')+'일간 X(트위터)에 올린 게시글 목록입니다.\n\n'
+    + '아래 형식으로 정리해주세요(마크다운 제목 없이 그냥 줄바꿈으로 구분):\n'
+    + '1. 이슈 설명 — 게시글 내용을 바탕으로 이 논쟁이 무엇에 대한 것인지 2~3문장 배경 설명\n'
+    + '2. 계파/정당별 입장 — 각 계파·정당이 어떤 입장을 취하는지 정리\n'
+    + '3. 주요 공방 — 의원들 사이 구체적으로 어떤 발언이 오갔는지, 누가 누구를 겨냥했는지 시간순으로 정리. 실제 발언은 큰따옴표로 인용\n\n'
+    + '게시글 목록:\n'+lines;
+}
+async function runXFeedAiSummary(r){
+  let btn=document.getElementById('xfAiBtn'), out=document.getElementById('xfAiResult');
+  if(!btn || !out) return;
+  btn.disabled=true; btn.textContent='정리 중…';
+  out.innerHTML='<div class="xfAiLoading"><div class="xFeedSpinner"></div>AI가 이슈와 공방을 정리하는 중…</div>';
+  try{
+    let res=await fetch(geminiXFeedUrl(), {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ contents:[{ parts:[{ text: buildXFeedAiPrompt(r) }] }] })
+    });
+    let data=await res.json();
+    if(!res.ok) throw new Error((data && data.error && data.error.message) || ('HTTP '+res.status));
+    let cand=data && data.candidates && data.candidates[0];
+    let text=(cand && cand.content && cand.content.parts && cand.content.parts[0] && cand.content.parts[0].text || '').trim();
+    if(!text) throw new Error('응답이 비었습니다');
+    out.innerHTML='<div class="xfAiText">'+esc(text).replace(/\n/g,'<br>')+'</div>';
+  }catch(e){
+    console.error(e);
+    out.innerHTML='<div class="xfAiErr">AI 정리 실패: '+esc(e.message)+'</div>';
+  }
+  btn.disabled=false; btn.textContent='🤖 이슈 설명 + 공방 정리 (AI)';
+}
+
+// --- 미배선 버튼 배선 (백업) ---
+
+(function(){
+  let bk=document.getElementById('backupBtn');
+  if(bk) bk.onclick=function(){
+    let payload={
+      exportedAt:new Date().toISOString(),
+      count:D.members.length,
+      members:D.members
+        .filter(m=>(m.fac&&m.fac.length)||m.tier||m.memo||m.fb||m.x)
+        .map(m=>({row:m.row,nm:m.nm,p:m.p,fac:m.fac||[],tier:m.tier||'',memo:m.memo||'',fb:m.fb||'',x:m.x||'',ph:m.ph||''}))
+    };
+    let blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
+    let url=URL.createObjectURL(blob);
+    let a=document.createElement('a');
+    let d=new Date(), pad=n=>String(n).padStart(2,'0');
+    a.href=url;
+    a.download='sns_backup_'+d.getFullYear()+pad(d.getMonth()+1)+pad(d.getDate())+'_'+pad(d.getHours())+pad(d.getMinutes())+'.json';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url), 1000);
+    setStatus('백업 저장됨 ('+payload.members.length+'명)','#E6F4EA',2500);
+  };
+})();
+
+/* 부모(people.html) 탭 줄로 옮긴 검색/백업 컨트롤이 여길 조작하는 창구.
+   내부 id는 그대로 두고(이 파일 안 로직은 안 건드림), 값만 넣고 기존 버튼을 눌러준다. */
+window.legacySearchAPI = {
+  setQuery(v){ const el = document.getElementById('q'); if(el) el.value = v; },
+  search(){ document.getElementById('searchBtn')?.click(); },
+  clear(){ const el = document.getElementById('q'); if(el) el.value = ''; if(typeof clearSearch === 'function') clearSearch(); },
+  backup(){ document.getElementById('backupBtn')?.click(); }
+};
+
+buildFilters();buildRegionFilter();draw();
+
+</script>
+</body></html>

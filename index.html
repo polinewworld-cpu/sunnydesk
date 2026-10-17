@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<script>window.__perfStart = performance.now();</script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>써니데스크</title>
+<link rel="icon" id="faviconLink" type="image/png" href="favicon.png">
+<!-- 초기 로딩 단축: 로그인·DB·폰트 호스트에 미리 연결 -->
+<link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://securetoken.googleapis.com" crossorigin>
+<link rel="preconnect" href="https://identitytoolkit.googleapis.com" crossorigin>
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<!-- Firebase SDK — head에서 defer로 병렬 다운로드(파싱 안 막음), DOMContentLoaded 전에 순서대로 실행 -->
+<script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<link rel="stylesheet" href="style.css">
+<style>
+  @media (max-width:640px){
+    #snsToolFrame{
+      min-height:0 !important;
+    }
+  }
+</style>
+</head>
+<body>
+
+<div id="authGate" class="auth-gate">
+  <div class="auth-box">
+    <div class="auth-mark"><span class="g-b">S</span><span class="g-r">u</span><span class="g-y">n</span><span class="g-b">n</span><span class="g-g">y</span></div>
+    <div class="auth-title">써니데스크</div>
+    <p class="auth-desc">구글 계정으로 로그인해야 이용할 수 있어요.</p>
+    <button id="authGoogleBtn" class="auth-google-btn">
+      <svg viewBox="0 0 48 48" width="18" height="18" aria-hidden="true"><path fill="#4285F4" d="M45.1 24.5c0-1.6-.1-3.1-.4-4.6H24v9h11.9c-.5 2.8-2.1 5.1-4.4 6.7v5.5h7.1c4.2-3.9 6.5-9.6 6.5-16.6z"/><path fill="#34A853" d="M24 46c5.9 0 10.9-2 14.6-5.3l-7.1-5.5c-2 1.3-4.5 2.1-7.5 2.1-5.8 0-10.7-3.9-12.4-9.2H4.3v5.7C8 41.9 15.4 46 24 46z"/><path fill="#FBBC05" d="M11.6 27.1c-.4-1.3-.7-2.7-.7-4.1s.2-2.8.7-4.1v-5.7H4.3C2.8 16.2 2 19 2 22s.8 5.8 2.3 8.8z"/><path fill="#EA4335" d="M24 10.8c3.2 0 6 1.1 8.3 3.3l6.3-6.3C34.9 4.2 29.9 2 24 2 15.4 2 8 6.1 4.3 13.2l7.3 5.7c1.7-5.3 6.6-9.2 12.4-9.2z"/></svg>
+      구글 계정으로 로그인
+    </button>
+    <div id="authMsg" class="auth-msg" hidden></div>
+  </div>
+</div>
+<script>
+  /* 이전에 로그인한 적 있는 기기면 새로고침 때 로그인 폼 대신 "불러오는 중"만 보인다.
+     실제 세션이 없으면 app.js가 showAuthGate로 로그인 폼을 다시 띄운다. */
+  try{ if(localStorage.getItem('jungle_seen_login')==='1') document.getElementById('authGate').classList.add('auth-loading'); }catch(e){}
+</script>
+
+<header class="google-bar" id="appHeader">
+  <button class="gb-hamburger" id="sidebarToggleBtn" title="사이드바 접기/펼치기" aria-label="사이드바 토글">
+    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/></svg>
+  </button>
+  <button class="gb-mmenu" id="mobileMenuBtn" aria-label="메뉴 열기">
+    <span class="mm-b"></span><span class="mm-r"></span><span class="mm-y"></span>
+  </button>
+  <div class="gb-brand" id="gbBrand" title="써니데스크">
+    <span class="g-mark" aria-label="Sunny"><span class="g-b">S</span><span class="g-r">u</span><span class="g-y">n</span><span class="g-b">n</span><span class="g-g">y</span></span>
+  </div>
+  <!-- 2026-09-24 헤더 통합: 화면 이름 글자 삭제. 검색은 제자리(40px)를 차지하고 펼칠 때 탭 위로 겹쳐 펼쳐짐.
+       PC(>900px)에서는 화면별 탭·주요 버튼을 app.js syncHeaderSlots()가 아래 두 슬롯으로 옮겨 끼움 -->
+  <div class="gb-search-anchor">
+    <div class="gb-search" id="gbSearch">
+      <svg class="gb-search-ico" viewBox="0 0 24 24" fill="currentColor"><path d="M15.5 14h-.79l-.28-.27a6.5 6.5 0 1 0-.7.7l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0A4.5 4.5 0 1 1 14 9.5 4.5 4.5 0 0 1 9.5 14z"/></svg>
+      <input id="globalSearch" type="search" autocomplete="off" placeholder="기사 검색">
+      <button id="globalSearchClear" hidden aria-label="지우기">✕</button>
+    </div>
+  </div>
+  <button class="gb-icon-btn" id="headerScrapAddBtn" title="스크랩 추가" aria-label="스크랩 추가">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"><path d="M6.5 3.5h11v17l-5.5-3.8-5.5 3.8z"/><path d="M12 7.5v5M9.5 10h5" stroke-linecap="round"/></svg>
+  </button>
+  <div class="gb-slot gb-slot-tabs" id="gbTabsSlot"></div>
+  <div class="gb-right">
+    <div class="gb-countdown" title="다음 방송까지 남은 시간">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>
+      <span>다음방송 <span class="status-value countdown-value" id="countdown">--:--:--</span></span>
+    </div>
+    <div class="gb-slot gb-slot-actions" id="gbActionsSlot"></div>
+    <div class="gb-news-actions" id="gbNewsActions">
+      <button class="primary" id="newsRefreshBtn">업데이트</button>
+    </div>
+  </div>
+</header>
+
+<nav class="app-sidebar" id="appSidebar" aria-label="주 메뉴">
+  <div class="sb-brand-row">
+    <span class="g-mark sb-home-btn" id="sbHomeBtn" role="button" tabindex="0" aria-label="홈으로"><span class="g-b">S</span><span class="g-r">u</span><span class="g-y">n</span><span class="g-b">n</span><span class="g-g">y</span></span>
+    <button class="sb-close" id="leftDrawerClose" aria-label="메뉴 닫기">✕</button>
+  </div>
+  <div class="sb-countdown" id="sbCountdown">다음 방송 <b>--:--:--</b></div>
+  <div class="sb-group">
+    <div class="sb-label">모니터</div>
+    <button class="mode-btn active" id="modeNewsBtn" title="뉴스 모니터링">
+      <span class="mi"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" style="fill:none"><path stroke-linecap="round" stroke-linejoin="round" d="M12 7.5h1.5m-1.5 3h1.5m-7.5 3h7.5m-7.5 3h7.5m3-9h3.375c.621 0 1.125.504 1.125 1.125V18a2.25 2.25 0 0 1-2.25 2.25M16.5 7.5V18a2.25 2.25 0 0 0 2.25 2.25M16.5 7.5V4.875c0-.621-.504-1.125-1.125-1.125H4.125C3.504 3.75 3 4.254 3 4.875V18a2.25 2.25 0 0 0 2.25 2.25h13.5M6 7.5h3v3H6v-3Z"/></svg></span>
+      <span class="ml">뉴스 모니터링</span>
+    </button>
+    <button class="mode-btn" id="modeYtBtn" title="유튜브 모니터링">
+      <span class="mi"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" style="fill:none"><path stroke-linecap="round" stroke-linejoin="round" d="m15.75 10.5 4.72-4.72a.75.75 0 0 1 1.28.53v11.38a.75.75 0 0 1-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 0 0 2.25-2.25v-9a2.25 2.25 0 0 0-2.25-2.25h-9A2.25 2.25 0 0 0 2.25 7.5v9a2.25 2.25 0 0 0 2.25 2.25Z"/></svg></span>
+      <span class="ml">유튜브 모니터링</span>
+    </button>
+    <button class="mode-btn" id="modeSnsBtn" title="SNS 모니터링">
+      <span class="mi"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" style="fill:none"><path stroke-linecap="round" stroke-linejoin="round" d="M20.25 8.511c.884.284 1.5 1.128 1.5 2.097v4.286c0 1.136-.847 2.1-1.98 2.193-.34.027-.68.052-1.02.072v3.091l-3-3c-1.354 0-2.694-.055-4.02-.163a2.115 2.115 0 0 1-.825-.242m9.345-8.334a2.126 2.126 0 0 0-.476-.095 48.64 48.64 0 0 0-8.048 0c-1.131.094-1.976 1.057-1.976 2.192v4.286c0 .837.46 1.58 1.155 1.951m9.345-8.334V6.637c0-1.621-1.152-3.026-2.76-3.235A48.455 48.455 0 0 0 11.25 3c-2.115 0-4.198.137-6.24.402-1.608.209-2.76 1.614-2.76 3.235v6.226c0 1.621 1.152 3.026 2.76 3.235.577.075 1.157.14 1.74.194V21l4.155-4.155"/></svg></span>
+      <span class="ml">SNS 모니터링</span>
+    </button>
+    <button class="mode-btn" id="modeOpinionBtn" style="display:none" data-sunny-hidden="빼기 체크리스트 참고" title="여론 모니터링">
+      <span class="mi"><svg viewBox="0 0 24 24"><path d="M20 2H4a2 2 0 0 0-2 2v18l4-4h14a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2zM7 9h10v2H7V9zm6 5H7v-2h6v2zm4-6H7V6h10v2z"/></svg></span>
+      <span class="ml">여론 모니터링</span>
+    </button>
+    <button class="mode-btn" id="modeReportBtn" title="뉴스 리포트">
+      <span class="mi"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" style="fill:none"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 3v11.25A2.25 2.25 0 0 0 6 16.5h2.25M3.75 3h-1.5m1.5 0h16.5m0 0h1.5m-1.5 0v11.25A2.25 2.25 0 0 1 18 16.5h-2.25m-7.5 0h7.5m-7.5 0-1 3m8.5-3 1 3m0 0 .5 1.5m-.5-1.5h-9.5m0 0-.5 1.5m.75-9 3-3 2.148 2.148A12.061 12.061 0 0 1 16.5 7.605"/></svg></span>
+      <span class="ml">뉴스 리포트</span>
+    </button>
+  </div>
+
+  <div class="sb-group">
+    <div class="sb-label">도구</div>
+    <button class="mode-btn" id="modeShinpdBtn" title="신피디">
+      <span class="mi"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" style="fill:none"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0"/></svg></span>
+      <span class="ml">신피디</span>
+    </button>
+    <button class="mode-btn" id="modeMemoBtn" title="메모">
+      <span class="mi"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" style="fill:none"><path stroke-linecap="round" stroke-linejoin="round" d="M11.35 3.836c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 0 0 .75-.75 2.25 2.25 0 0 0-.1-.664m-5.8 0A2.251 2.251 0 0 1 13.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m8.9-4.414c.376.023.75.05 1.124.08 1.131.094 1.976 1.057 1.976 2.192V16.5A2.25 2.25 0 0 1 18 18.75h-2.25m-7.5-10.5H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V18.75m-7.5-10.5h6.375c.621 0 1.125.504 1.125 1.125v9.375m-8.25-3 1.5 1.5 3-3.75"/></svg></span>
+      <span class="ml">메모</span>
+    </button>
+    <button class="mode-btn" id="modeNoticeBtn" style="display:none" data-sunny-hidden="빼기 체크리스트 참고" title="공지사항">
+      <span class="mi"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" style="fill:none"><path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10"/></svg></span>
+      <span class="ml">공지사항</span>
+    </button>
+    <button class="mode-btn" id="modeSettingsBtn" title="설정">
+      <span class="mi"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" style="fill:none"><path stroke-linecap="round" stroke-linejoin="round" d="M10.343 3.94c.09-.542.56-.94 1.11-.94h1.093c.55 0 1.02.398 1.11.94l.149.894c.07.424.384.764.78.93.398.164.855.142 1.205-.108l.737-.527a1.125 1.125 0 0 1 1.45.12l.773.774c.39.389.44 1.002.12 1.45l-.527.737c-.25.35-.272.806-.107 1.204.165.397.505.71.93.78l.893.15c.543.09.94.559.94 1.109v1.094c0 .55-.397 1.02-.94 1.11l-.894.149c-.424.07-.764.383-.929.78-.165.398-.143.854.107 1.204l.527.738c.32.447.269 1.06-.12 1.45l-.774.773a1.125 1.125 0 0 1-1.449.12l-.738-.527c-.35-.25-.806-.272-1.203-.107-.398.165-.71.505-.781.929l-.149.894c-.09.542-.56.94-1.11.94h-1.094c-.55 0-1.019-.398-1.11-.94l-.148-.894c-.071-.424-.384-.764-.781-.93-.398-.164-.854-.142-1.204.108l-.738.527c-.447.32-1.06.269-1.45-.12l-.773-.774a1.125 1.125 0 0 1-.12-1.45l.527-.737c.25-.35.272-.806.108-1.204-.165-.397-.506-.71-.93-.78l-.894-.15c-.542-.09-.94-.56-.94-1.109v-1.094c0-.55.398-1.02.94-1.11l.894-.149c.424-.07.765-.383.93-.78.165-.398.143-.854-.108-1.204l-.526-.738a1.125 1.125 0 0 1 .12-1.45l.773-.773a1.125 1.125 0 0 1 1.45-.12l.737.527c.35.25.807.272 1.204.107.397-.165.71-.505.78-.929l.15-.894Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/></svg></span>
+      <span class="ml">설정</span>
+    </button>
+    <button class="mode-btn sb-reset-btn" id="newsFullRefreshBtn" title="불러온 기사를 다 지우고 처음부터 기사를 불러와요">
+      <span class="mi"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" style="fill:none"><path stroke-linecap="round" stroke-linejoin="round" d="M5.636 5.636a9 9 0 1 0 12.728 0M12 3v9"/></svg></span>
+      <span class="ml">리셋</span>
+    </button>
+  </div>
+
+  <div class="sb-group" style="display:none" data-sunny-hidden="빼기 체크리스트 참고">
+    <div class="sb-label">외부</div>
+    <button class="mode-btn" id="modeCanvaBtn" title="캔바 (새 창)">
+      <span class="mi"><svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm3.5 12.6c-.8 1.3-2.1 2.1-3.5 2.1-2.2 0-3.6-1.7-3.6-4.1 0-3 1.9-5.4 4-5.4 1 0 1.6.6 1.6 1.4 0 .5-.2.9-.5 1.4-.2.3-.4.4-.6.4-.2 0-.3-.1-.3-.3 0-.2.1-.4.1-.7 0-.5-.3-.8-.8-.8-1.2 0-2.2 1.8-2.2 3.7 0 1.6.8 2.6 2 2.6 1 0 1.9-.6 2.6-1.6.2-.2.3-.3.5-.3.2 0 .3.1.3.3 0 .1 0 .2-.1.3z"/></svg></span>
+      <span class="ml">캔바</span>
+    </button>
+    <button class="mode-btn" id="modeStudioBtn" title="유튜브 스튜디오 (새 창)">
+      <span class="mi"><svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm0 18a8 8 0 1 1 0-16 8 8 0 0 1 0 16zm-2-11.5l6 3.5-6 3.5v-7z"/></svg></span>
+      <span class="ml">스튜디오</span>
+    </button>
+  </div>
+  <!-- 바로가기(선택하세요) + 관리 톱니 — 2026-09-24 뉴스 탭 줄에서 사이드바로 이동(PC). 모바일은 아래 sbQuicklinks 목록 사용 -->
+  <div class="sb-ql-select">
+    <div class="quicklink-wrap">
+      <select id="quickLinkSelect"><option value="">선택하세요</option></select>
+      <button class="subtab-btn" id="quickLinkSettingsBtn" title="바로가기 링크 관리"><svg class="btn-ico" viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M19.43 12.98c.04-.32.07-.64.07-.98s-.03-.66-.07-.98l2.11-1.65a.5.5 0 0 0 .12-.64l-2-3.46a.5.5 0 0 0-.61-.22l-2.49 1a7.03 7.03 0 0 0-1.69-.98l-.38-2.65A.49.49 0 0 0 13 2h-4a.49.49 0 0 0-.49.42l-.38 2.65c-.61.25-1.17.59-1.69.98l-2.49-1a.5.5 0 0 0-.61.22l-2 3.46a.5.5 0 0 0 .12.64l2.11 1.65c-.04.32-.07.65-.07.98s.03.66.07.98l-2.11 1.65a.5.5 0 0 0-.12.64l2 3.46a.5.5 0 0 0 .61.22l2.49-1c.52.4 1.08.73 1.69.98l.38 2.65c.03.24.24.42.49.42h4c.25 0 .46-.18.49-.42l.38-2.65c.61-.25 1.17-.59 1.69-.98l2.49 1a.5.5 0 0 0 .61-.22l2-3.46a.5.5 0 0 0-.12-.64l-2.11-1.65zM12 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z"/></svg></button>
+    </div>
+  </div>
+  <div class="sb-quicklinks" id="sbQuicklinks"></div>
+  <div class="sb-account" id="sbAccount"></div>
+</nav>
+
+<div class="drawer-backdrop" id="drawerBackdrop"></div>
+
+<div id="ytApp" style="display:none;">
+<header>
+  <div class="header-row">
+    <div class="news-subtabs pill-nav" id="tabsRow"></div>
+    <div class="actions">
+      <button class="ghost" id="settingsBtn"><svg class="btn-ico" viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M19.43 12.98c.04-.32.07-.64.07-.98s-.03-.66-.07-.98l2.11-1.65a.5.5 0 0 0 .12-.64l-2-3.46a.5.5 0 0 0-.61-.22l-2.49 1a7.03 7.03 0 0 0-1.69-.98l-.38-2.65A.49.49 0 0 0 13 2h-4a.49.49 0 0 0-.49.42l-.38 2.65c-.61.25-1.17.59-1.69.98l-2.49-1a.5.5 0 0 0-.61.22l-2 3.46a.5.5 0 0 0 .12.64l2.11 1.65c-.04.32-.07.65-.07.98s.03.66.07.98l-2.11 1.65a.5.5 0 0 0-.12.64l2 3.46a.5.5 0 0 0 .61.22l2.49-1c.52.4 1.08.73 1.69.98l.38 2.65c.03.24.24.42.49.42h4c.25 0 .46-.18.49-.42l.38-2.65c.61-.25 1.17-.59 1.69-.98l2.49 1a.5.5 0 0 0 .61-.22l2-3.46a.5.5 0 0 0-.12-.64l-2.11-1.65zM12 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z"/></svg>채널설정</button>
+      <button class="primary" id="refreshBtn">업데이트</button>
+    </div>
+  </div>
+
+  <div class="settings" id="settingsPanel">
+    <h3>모니터링 채널</h3>
+    <div class="cur-tab" id="curTabLabel"></div>
+    <div class="channel-row">
+      <input type="text" id="newHandle" placeholder="핸들(@Newstradamus) 또는 재생목록 전용이면 임의 식별명">
+      <input type="text" id="newName" placeholder="표시 이름">
+    </div>
+    <div class="channel-row">
+      <input type="text" id="newPlaylistId" placeholder="재생목록 ID 또는 URL 붙여넣기(선택, 예: PLxxxx 또는 전체 URL) — 비우면 채널 전체 업로드">
+      <button class="small" id="addChannelBtn">추가</button>
+    </div>
+    <div style="font-size:10.5px;color:var(--text-faint);margin-top:4px;">재생목록을 지정하면 그 재생목록의 영상만, 비워두면 채널 업로드 전체를 가져옵니다. (쇼츠는 항상 제외, 동영상/라이브 구분 없음)</div>
+    <div class="channel-list" id="channelList"></div>
+  </div>
+</header>
+
+<main id="sections"></main>
+</div><!-- /ytApp -->
+
+<div id="newsApp">
+  <header>
+    <div class="news-subtabs">
+      <div class="pill-nav">
+      <button class="subtab-btn active" id="subtabLiveBtn">실시간</button>
+      <button class="subtab-btn" id="subtabImportantBtn" style="display:none" data-sunny-hidden="빼기 체크리스트 참고">관심</button>
+      <span id="importantSetTabsExtra" style="display:none"></span>
+      <button class="subtab-btn" id="subtabKeywordBtn">키워드</button>
+      <button class="subtab-btn" id="subtabRecommendBtn">추천<span class="rc-count" id="rcCount" hidden></span></button>
+      <button class="subtab-btn" id="subtabOpcolBtn" style="display:none" data-sunny-hidden="빼기 체크리스트 참고">사설칼럼</button>
+      <button class="subtab-btn" id="subtabSavedNewsBtn">스크랩</button>
+      <button class="subtab-btn" id="subtabArchiveBtn">존안</button>
+      </div>
+      <button class="subtab-btn kw-gear-btn" id="keywordGearBtn" title="키워드 관리"><svg class="btn-ico" viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M19.43 12.98c.04-.32.07-.64.07-.98s-.03-.66-.07-.98l2.11-1.65a.5.5 0 0 0 .12-.64l-2-3.46a.5.5 0 0 0-.61-.22l-2.49 1a7.03 7.03 0 0 0-1.69-.98l-.38-2.65A.49.49 0 0 0 13 2h-4a.49.49 0 0 0-.49.42l-.38 2.65c-.61.25-1.17.59-1.69.98l-2.49-1a.5.5 0 0 0-.61.22l-2 3.46a.5.5 0 0 0 .12.64l2.11 1.65c-.04.32-.07.65-.07.98s.03.66.07.98l-2.11 1.65a.5.5 0 0 0-.12.64l2 3.46a.5.5 0 0 0 .61.22l2.49-1c.52.4 1.08.73 1.69.98l.38 2.65c.03.24.24.42.49.42h4c.25 0 .46-.18.49-.42l.38-2.65c.61-.25 1.17-.59 1.69-.98l2.49 1a.5.5 0 0 0 .61-.22l2-3.46a.5.5 0 0 0-.12-.64l-2.11-1.65zM12 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z"/></svg></button>
+    </div>
+    <div class="keyword-manage-row" id="keywordManageRow"></div>
+  </header>
+  <main>
+    <div class="filter-bar" id="filterBar">
+      <button class="filter-toggle wrench-btn" id="kwWrenchBtn" data-wrench-for="keywordToggleGrid" style="display:none;" title="키워드 수정·삭제" aria-pressed="false"><svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M22.7 19l-9.1-9.1c.9-2.3.4-5-1.5-6.9-2-2-5-2.4-7.4-1.3L9 6 6 9 1.6 4.7C.4 7.1.9 10.1 2.9 12.1c1.9 1.9 4.6 2.4 6.9 1.5l9.1 9.1c.4.4 1 .4 1.4 0l2.3-2.3c.5-.4.5-1.1.1-1.4z"/></svg><span class="wr-label">완료</span></button>
+      <div id="outletScopeBar" style="display:none;">
+        <span class="osb-label">언론사</span>
+        <div class="osb-toggle" role="tablist">
+          <button id="osbSubscribed" class="osb-opt">구독 언론사만</button>
+          <button id="osbAll" class="osb-opt active">전체 기사</button>
+        </div>
+      </div>
+      <button class="filter-toggle" id="filterToggleBtn" aria-expanded="false">
+        <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" width="15" height="15" style="fill:none">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 1 1-3 0m3 0a1.5 1.5 0 1 0-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-9.75 0h9.75"/>
+        </svg>
+        필터 <span class="ft-caret">▾</span>
+      </button>
+    </div>
+    <div class="slider-row" id="sliderRow" hidden>
+      <div class="cluster-slider-bar" id="clusterSliderBar">
+        <div class="slider-header-row">
+          <span class="slider-title">뉴스 표시량</span>
+          <span class="slider-current-label" id="clusterSliderLabel">3시간 내</span>
+          <span class="slider-preview-count" id="clusterSliderPreview"></span>
+        </div>
+        <input type="range" id="clusterSlider" min="0" max="4" step="1" value="3" aria-label="뉴스 표시량 슬라이더">
+        <div class="slider-tick-row" id="clusterSliderTicks" aria-hidden="true"></div>
+      </div>
+      <div class="cluster-slider-bar" id="dupSliderBar">
+        <div class="slider-header-row">
+          <span class="slider-title">유사한 기사</span>
+          <span class="slider-current-label" id="dupSliderLabel">보통</span>
+          <span class="slider-preview-count" id="dupSliderPreview"></span>
+        </div>
+        <input type="range" id="dupSlider" min="0" max="4" step="1" value="2" aria-label="유사한 기사 슬라이더">
+        <div class="slider-tick-row" id="dupSliderTicks" aria-hidden="true"></div>
+      </div>
+      <div class="cluster-slider-bar" id="relSliderBar">
+        <div class="slider-header-row">
+          <span class="slider-title">기사 관련성</span>
+          <span class="slider-current-label" id="relSliderLabel">낮음</span>
+          <span class="slider-preview-count" id="relSliderPreview"></span>
+        </div>
+        <input type="range" id="relSlider" min="0" max="2" step="1" value="0" aria-label="기사 관련성 슬라이더">
+        <div class="slider-tick-row" id="relSliderTicks" aria-hidden="true"></div>
+      </div>
+      <div class="cluster-slider-bar" id="synSliderBar">
+        <div class="slider-header-row">
+          <span class="slider-title">키워드 정확도</span>
+          <span class="slider-current-label" id="synSliderLabel">낮음</span>
+          <span class="slider-preview-count" id="synSliderPreview"></span>
+        </div>
+        <input type="range" id="synSlider" min="0" max="2" step="1" value="0" aria-label="키워드 정확도 슬라이더">
+        <div class="slider-tick-row" id="synSliderTicks" aria-hidden="true"></div>
+      </div>
+    </div>
+    <div id="liveFeedPanel"></div>
+    <div id="importantNewsPanel" style="display:none;"></div>
+    <div id="recommendPanel" style="display:none;"></div>
+    <div id="keywordNewsPanel" style="display:none;">
+      <div class="keyword-toggle-grid" id="keywordToggleGrid"></div>
+      <div id="keywordResultList"></div>
+    </div>
+    <div id="opcolPanel" style="display:none;">
+      <div class="opcol-head">
+        <div class="osb-toggle" role="tablist">
+          <button class="osb-opt active" data-opview="subs">구독중인 사설·칼럼</button>
+          <button class="osb-opt" data-opview="manage">관리</button>
+        </div>
+      </div>
+      <div id="opcolSubsView">
+        <div class="keyword-toggle-grid" id="opcolChips"></div>
+        <div id="opcolList"></div>
+      </div>
+      <div id="opcolManageView" hidden></div>
+    </div>
+    <div id="savedNewsPanel" style="display:none;">
+      <div class="saved-toolbar">
+        <button id="scrapSelectAllBtn" class="small" title="화면의 스크랩 전체 선택/선택해제">전체선택</button>
+        <button id="scrapAddBtn" class="primary small">+ 스크랩 추가</button>
+        <div id="savedReportBar" class="saved-report-bar" hidden></div>
+      </div>
+      <div id="savedNewsList" class="theme-grid"></div>
+    </div>
+    <div id="archivePanel" style="display:none;">
+      <div id="archiveStickyBar">
+        <div class="wrench-line">
+        <button class="filter-toggle wrench-btn" data-wrench-for="archiveFolderChips" title="카테고리 수정·삭제" aria-pressed="false"><svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M22.7 19l-9.1-9.1c.9-2.3.4-5-1.5-6.9-2-2-5-2.4-7.4-1.3L9 6 6 9 1.6 4.7C.4 7.1.9 10.1 2.9 12.1c1.9 1.9 4.6 2.4 6.9 1.5l9.1 9.1c.4.4 1 .4 1.4 0l2.3-2.3c.5-.4.5-1.1.1-1.4z"/></svg><span class="wr-label">완료</span></button>
+        <div id="archiveFolderChips" class="saved-hashtag-row"></div>
+        </div>
+      </div>
+      <div id="archiveList" class="theme-grid"></div>
+    </div>
+  </main>
+</div><!-- /newsApp -->
+
+<div id="reportApp" style="display:none;">
+  <header>
+    <div class="header-row">
+      <div class="brand"><div class="dot" style="background:#8e44ad;box-shadow:0 0 10px rgba(142,68,173,.35);"></div><div><h1>뉴스 리포트</h1></div></div>
+    </div>
+  </header>
+  <main>
+    <div class="rp-top">
+      <div class="report-page-note">스크랩 탭에서 기사를 체크해 만든 원고입니다. 삭제하기 전까지 계정에 보관됩니다.</div>
+      <div class="rp-search">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4 4" stroke-linecap="round"/></svg>
+        <input type="search" id="reportSearch" autocomplete="off" placeholder="리포트 제목·본문 검색" aria-label="리포트 검색">
+      </div>
+    </div>
+    <div id="reportList" class="report-list"></div>
+  </main>
+</div><!-- /reportApp -->
+
+<div id="settingsApp" style="display:none;">
+  <header>
+    <div class="header-row">
+      <div class="brand"><div class="dot" style="background:#5b8def;box-shadow:0 0 10px rgba(91,141,239,.35);"></div><div><h1>설정</h1></div></div>
+    </div>
+    <div class="news-subtabs set-subtabs pill-nav">
+      <button class="subtab-btn" id="setTabPersona" style="display:none" data-sunny-hidden="빼기 체크리스트 참고">유형</button>
+      <button class="subtab-btn" id="setTabTrouble" style="display:none" data-sunny-hidden="빼기 체크리스트 참고">기사 노출에 불만 있어요</button>
+      <button class="subtab-btn active" id="setTabManage">관리</button>
+      <button class="subtab-btn" id="setTabOutlets">언론사</button>
+      <button class="subtab-btn" id="setTabAlgo" hidden>알고리즘</button>
+    </div>
+  </header>
+  <main>
+    <div class="set-pane" id="setPanePersona">
+      <p class="set-note">쓰는 방식에 가장 가까운 유형을 고르면 실시간·관심뉴스 필터가 한 번에 맞춰집니다. 고른 뒤 팝업에서 세부 조정도 할 수 있습니다.</p>
+      <button class="set-wizard-btn" id="setWizardBtn">몇 가지 질문으로 유형 추천받기 →</button>
+      <div class="persona-grid" id="personaGrid"></div>
+    </div>
+    <div class="set-pane" id="setPaneTrouble" hidden>
+      <p class="set-note">지금 겪는 증상을 고르면 관련 필터를 한 단계씩 조정해 드립니다.</p>
+      <div class="trouble-list" id="troubleList"></div>
+    </div>
+    <div class="set-pane" id="setPaneManage" hidden>
+      <div class="manage-cards">
+        <section class="manage-card">
+          <h4 class="mc-title">사용할 메뉴</h4>
+          <p class="mc-desc">이 계정에서만 적용됩니다. 끄면 왼쪽 메뉴에서 사라집니다.</p>
+          <div id="menuToggleList" class="menu-toggle-list"></div>
+        </section>
+        <section class="manage-card">
+          <h4 class="mc-title">관심뉴스 세트 관리</h4>
+          <p class="mc-desc">관심뉴스 탭 이름을 바꾸거나 세트를 추가·삭제합니다. 키워드는 관심뉴스 탭에서 그대로 관리합니다.</p>
+          <div id="importantSetAdminList" class="ims-admin-list"></div>
+        </section>
+        <section class="manage-card">
+          <h4 class="mc-title">팀 계정</h4>
+          <p class="mc-desc">이 고객사에 로그인할 수 있는 구글 계정입니다.</p>
+          <div id="teamAccountsSection" class="team-accounts"></div>
+        </section>
+        <section class="manage-card">
+          <h4 class="mc-title">내 기기 기록</h4>
+          <p class="mc-desc">이 브라우저에서 “빼기(=읽음)”한 기사를 모두 되돌립니다. 이 기기·계정에만 적용됩니다.</p>
+          <button id="clearReadHistoryBtn" class="mc-danger-btn">뺀 기사 전체 초기화</button>
+        </section>
+        <section class="manage-card" id="devToolsCard" hidden>
+          <h4 class="mc-title">개발자 도구</h4>
+          <label class="mc-toggle">
+            <span class="mc-toggle-label">성능 오버레이 표시</span>
+            <input type="checkbox" id="perfToggleChk">
+            <span class="mc-switch" aria-hidden="true"></span>
+          </label>
+          <p class="mc-desc">화면 좌하단에 수집·렌더 소요 시간을 표시합니다. 개발용.</p>
+        </section>
+      </div>
+    </div>
+    <div class="set-pane" id="setPaneOutlets" hidden>
+      <div class="manage-cards">
+        <section class="manage-card">
+          <h4 class="mc-title">언론사 관리</h4>
+          <p class="mc-desc">구독할 언론사를 켜고 끕니다. RSS 주소로 언론사를 직접 추가할 수도 있습니다.</p>
+          <div id="outletSettingsList"></div>
+        </section>
+      </div>
+    </div>
+    <div class="set-pane" id="setPaneAlgo" hidden>
+      <p class="set-note">뉴스 수집·필터·정렬에 쓰이는 값을 직접 조정합니다. <b>팀 전체에 즉시 반영</b>되고 다음 수집부터 적용됩니다. 잘 모르면 각 항목의 "기본값"을 누르세요.</p>
+      <div id="algoSections"></div>
+      <div class="algo-foot" id="algoFoot"></div>
+    </div>
+    <div class="set-foot" id="setFoot"></div>
+  </main>
+</div><!-- /settingsApp -->
+
+<div id="searchApp" style="display:none;">
+  <header>
+    <div class="header-row">
+      <div class="brand"><div class="dot" style="background:#9aa0a6;box-shadow:none;"></div><div><h1>검색</h1></div></div>
+    </div>
+  </header>
+  <main>
+    <div id="searchRecentRow" class="kw-recent"></div>
+    <div id="searchResults"></div>
+  </main>
+</div><!-- /searchApp -->
+
+
+<div id="noticeApp" style="display:none;">
+  <header>
+    <div class="header-row">
+      <div class="brand">
+        <div class="dot" style="background:#f0ad2e;box-shadow:0 0 10px rgba(240,173,46,.35);"></div>
+        <div>
+          <h1>공지사항</h1>
+        </div>
+      </div>
+      <div class="actions">
+        <button class="primary" id="noticeNewBtn">+ 새 공지 작성</button>
+      </div>
+    </div>
+  </header>
+  <main>
+    <div class="notice-main">
+      <div id="noticeNewForm" class="notice-new-form" style="display:none;">
+        <input id="noticeNewTitle" class="notice-edit-title" placeholder="제목">
+        <textarea id="noticeNewBody" class="notice-edit-body" placeholder="내용"></textarea>
+        <div class="notice-actions">
+          <button class="primary small" id="noticeNewSave">등록</button>
+          <button class="ghost small" id="noticeNewCancel">취소</button>
+        </div>
+      </div>
+      <div class="notice-grid" id="noticeGrid">
+        <div class="cal-memo" id="calMemoCard">
+          <div class="cal-memo-title"><span class="dot"></span>이번 주 일정</div>
+          <div id="calMemoBody"></div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div><!-- /noticeApp -->
+
+
+
+
+<div id="snsApp" style="display:none;">
+  <!-- SNS 탭(안쪽 people.html)을 헤더에 비춰 보여주는 자리 — PC에서만 헤더 슬롯으로 옮겨짐, 평소엔 숨김 (2026-09-24) -->
+  <div class="sns-header-tabs" id="snsHeaderTabsWrap">
+    <div class="pill-nav" id="snsHeaderTabs"></div>
+    <button class="gb-add-btn" id="snsHeaderAddBtn" title="새 그룹 추가" aria-label="새 그룹 추가">＋</button>
+  </div>
+  <iframe id="snsToolFrame" src="people.html" loading="lazy" style="width:100%;height:calc(100vh - var(--header-h));border:0;display:block;background:#EEF0F3;"></iframe>
+</div><!-- /snsApp -->
+
+<div id="opinionApp" style="display:none;">
+  <header>
+    <div class="header-row">
+      <div class="brand"><div class="dot" style="background:#00897b;box-shadow:0 0 10px rgba(0,137,123,.35);"></div><div><h1>여론 모니터링</h1></div></div>
+      <div class="actions op-actions">
+        <button class="op-pill" id="opinionScrapAllBtn" title="아래 리포트 전체를 스크랩에 저장">전체 스크랩</button>
+        <button class="op-pill op-pill-go" id="opinionRefreshBtn">업데이트</button>
+      </div>
+    </div>
+  </header>
+  <main>
+    <div class="opinion-note" id="opinionNote">등록한 카페의 최근 글을 카페별로 모아 봅니다.</div>
+    <div class="op-controls">
+      <div class="op-ctl-row">
+        <div class="op-range-bar" id="opinionRangeBar">
+          <div class="op-range-head"><span class="op-range-title">기간</span><span class="op-range-val" id="opinionWindowVal">24시간 내</span></div>
+          <input type="range" id="opinionWindowSlider" min="0" max="3" step="1" value="1" aria-label="여론 모니터링 기간 슬라이더">
+          <div class="op-range-ticks"><span>48h</span><span>24h</span><span>12h</span><span>6h</span></div>
+        </div>
+        <div class="op-sort-seg" id="opinionSortSeg">
+          <button data-sort="recent" class="on">최신순</button>
+          <button data-sort="views">조회수순</button>
+        </div>
+      </div>
+      <div class="op-kw-bar">
+        <span class="op-fav-label">관심 키워드</span>
+        <div class="op-kw-chips" id="opinionKwChips"></div>
+        <button class="op-fav-toggle" id="opinionFavOnlyBtn" title="체크한 키워드가 걸리는 글만 보기">관심글만</button>
+        <button class="op-key-btn" id="opinionKeywordBtn" title="관심뉴스 키워드 관리로 이동">키워드 관리</button>
+      </div>
+      <div class="op-cafe-bar">
+        <span class="op-fav-label">등록 카페</span>
+        <div class="op-fav-chips" id="opinionCafeChips"></div>
+        <input id="opinionCafeInput" class="op-fav-input" placeholder="네이버 카페 주소 붙여넣기 (cafe.naver.com/…)">
+        <button class="op-cafe-add" id="opinionCafeAddBtn">등록</button>
+      </div>
+    </div>
+    <div id="opinionList" class="opinion-list"></div>
+  </main>
+</div><!-- /opinionApp -->
+
+<div id="homeApp" style="display:none;">
+  <header>
+    <div class="header-row">
+      <div class="brand"><div class="dot" style="background:#1a73e8;box-shadow:0 0 10px rgba(26,115,232,.35);"></div><div><h1>홈</h1></div></div>
+    </div>
+  </header>
+  <main>
+    <div class="home-quick-block">
+      <h2>메모</h2>
+      <div class="quickadd-bar">
+        <input type="text" id="homeMemoQuickAdd" placeholder="링크 또는 메모를 입력하세요" autocomplete="off">
+        <button class="primary small" id="homeMemoQuickAddBtn">확인</button>
+      </div>
+    </div>
+    <div class="home-quick-block">
+      <h2>스크랩</h2>
+      <div class="quickadd-bar">
+        <input type="text" id="homeScrapQuickAdd" placeholder="기사·SNS 링크 또는 메모를 입력하세요" autocomplete="off">
+        <button class="primary small" id="homeScrapQuickAddBtn">확인</button>
+      </div>
+    </div>
+    <button class="home-live-btn" id="homeLiveBtn">실시간 뉴스 바로가기</button>
+  </main>
+</div><!-- /homeApp -->
+
+<div id="memoApp" style="display:none;">
+  <header>
+    <div class="header-row">
+      <div class="brand"><div class="dot" style="background:#f4b400;box-shadow:0 0 10px rgba(244,180,0,.35);"></div><div><h1>메모</h1></div></div>
+    </div>
+  </header>
+  <main>
+    <div class="memo-float" id="memoFloat">   <!-- 스크롤해도 입력창·카테고리·메모 추가가 함께 떠 있음(2026-10-03) -->
+    <div class="quickadd-bar">
+      <input type="text" id="memoQuickAdd" placeholder="링크 또는 메모를 입력하세요" autocomplete="off">
+      <button class="primary small" id="memoQuickAddBtn">확인</button>
+    </div>
+    <div class="memo-cat-bar" id="memoCatStickyBar">
+      <button class="filter-toggle wrench-btn" data-wrench-for="memoCatChips" title="카테고리 수정·삭제" aria-pressed="false"><svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15"><path d="M22.7 19l-9.1-9.1c.9-2.3.4-5-1.5-6.9-2-2-5-2.4-7.4-1.3L9 6 6 9 1.6 4.7C.4 7.1.9 10.1 2.9 12.1c1.9 1.9 4.6 2.4 6.9 1.5l9.1 9.1c.4.4 1 .4 1.4 0l2.3-2.3c.5-.4.5-1.1.1-1.4z"/></svg><span class="wr-label">완료</span></button>
+      <div id="memoCatChips" class="saved-hashtag-row"></div>
+    </div>
+    <div class="saved-toolbar">
+      <button class="primary small" id="memoAddBtn">+ 메모 추가</button>
+    </div>
+    </div>
+    <div id="personalMemoList"></div>
+  </main>
+</div><!-- /memoApp -->
+
+
+<div id="shinpdApp" style="display:none;">
+  <header>
+    <div class="header-row">
+      <div class="brand"><div class="dot" style="background:#18181b;"></div><div><h1>신피디</h1></div></div>
+    </div>
+  </header>
+  <main class="sp-main">
+    <div class="sp-viewtabs" id="shinpdViewTabs" role="tablist">
+      <button type="button" role="tab" class="sp-vt on" data-view="report">이슈 브리핑</button>
+      <button type="button" role="tab" class="sp-vt" data-view="brief">방송 브리프</button>
+      <button type="button" role="tab" class="sp-vt" data-view="algo">유튜브 알고리즘</button>
+    </div>
+    <article class="gm-paper" id="shinpdPaper">
+      <div class="gm-toolbar">
+        <button type="button" class="gm-ic gm-inert" tabindex="-1" aria-label="뒤로" title="뒤로"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M12 19l-7-7 7-7"/></svg></button><span class="gm-sep"></span><button type="button" class="gm-ic gm-inert" tabindex="-1" aria-label="보관" title="보관"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7h18v4H3zM5 11v8h14v-8M10 15h4"/></svg></button><button type="button" class="gm-ic gm-inert" tabindex="-1" aria-label="삭제" title="삭제"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v6M14 11v6"/></svg></button><button type="button" class="gm-ic gm-inert" tabindex="-1" aria-label="읽지 않음으로 표시" title="읽지 않음으로 표시"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18v12H3zM3 7l9 7 9-7"/></svg></button><button type="button" class="gm-ic gm-inert" tabindex="-1" aria-label="더보기" title="더보기"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5h.01M12 12h.01M12 19h.01"/></svg></button>
+        <span class="gm-spacer"></span>
+        <button type="button" class="gm-ic" id="shinpdRefresh" aria-label="새로고침" title="새로고침"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.34-5.66M20 4v5h-5"/></svg></button>
+      </div>
+      <div class="gm-subjectrow">
+        <h2 class="gm-subject">신피디 모니터링 리포트</h2>
+        <span class="gm-chip">받은편지함</span>
+        <span class="gm-spacer"></span>
+        <button type="button" class="gm-ic" id="shinpdPrint" aria-label="인쇄" title="인쇄"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 9V4h10v5M6 17H4v-6a2 2 0 012-2h12a2 2 0 012 2v6h-2M7 14h10v6H7z"/></svg></button>
+        <button type="button" class="gm-ic" id="shinpdPopout" aria-label="새 창에서 열기" title="새 창에서 열기"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 01-1 1H5a1 1 0 01-1-1V7a1 1 0 011-1h5"/></svg></button>
+      </div>
+      <div class="gm-sender">
+        <img class="gm-avatar" src="shinpd-face.jpg?v=20261013b" alt="신피디(AI가 만든 가상 인물)" width="80" height="80">
+        <div class="gm-who">
+          <p class="gm-from"><b>신피디</b><span class="gm-addr">&lt;shinpd@jungle2&gt;</span></p>
+          <p class="gm-to">정치신세계 PD · 모니터링 · 정글2 팀에게 ▾</p>
+        </div>
+        <span class="gm-time" id="shinpdMeta">리포트 없음</span>
+        <div class="gm-actions">
+          <button type="button" class="gm-ic gm-inert" tabindex="-1" aria-label="별표" title="별표"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.5l2.6 5.4 5.9.8-4.3 4.1 1 5.9L12 16.9 6.8 19.7l1-5.9L3.5 9.7l5.9-.8z"/></svg></button><button type="button" class="gm-ic gm-inert" tabindex="-1" aria-label="답장" title="답장"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 8L4 13l6 5M4 13h9a7 7 0 017 7"/></svg></button>
+          <button type="button" class="gm-ic" id="shinpdChatBtn" aria-label="신피디와 대화" title="신피디와 대화"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 3L3 10.5l6.5 2.5L12 19.5 21 3zM9.5 13L21 3"/></svg></button>
+        </div>
+      </div>
+      <div class="gm-body sp-body" id="shinpdBody"></div>
+    </article>
+    <aside class="tg-chat" id="shinpdChat" role="dialog" aria-label="신피디와 대화" hidden>
+      <div class="tg-head">
+        <img class="tg-av" src="shinpd-face.jpg?v=20261013b" alt="" width="36" height="36">
+        <div class="tg-who"><div class="tg-name">신피디</div><div class="tg-sub">리포트 기준으로 답해요</div></div>
+        <button type="button" id="shinpdChatClose" class="tg-x" aria-label="닫기">×</button>
+      </div>
+      <div class="tg-log" id="shinpdChatLog"></div>
+      <form class="tg-in" id="shinpdChatForm">
+        <input id="shinpdChatInput" maxlength="500" placeholder="메시지 쓰기" autocomplete="off">
+        <button type="submit" id="shinpdChatSend" class="tg-send" aria-label="보내기"><svg width="34" height="34" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="12" fill="#2aabee"/><path d="M5.4 11.9l11.3-4.4c.5-.2 1 .1.8.9l-1.9 9c-.1.6-.5.8-1 .5l-2.9-2.1-1.4 1.4c-.2.2-.3.3-.6.3l.2-3 5.4-4.9c.2-.2 0-.3-.4-.1l-6.7 4.2-2.9-.9c-.6-.2-.6-.6.1-.9z" fill="#fff"/></svg></button>
+      </form>
+    </aside>
+  </main>
+</div><!-- /shinpdApp -->
+
+<!-- =====================================================
+     스크립트 로딩 순서 (변경 금지)
+     0. firebase compat SDK (app + auth) — 전역 firebase 선언, 구글 로그인용
+     1. config.js  — 고객사 설정값 (JUNGLE_CONFIG 전역 선언)
+     2. app-*.js   — 메인 앱(영역별 13개 파일, 전역 스코프 공유). app-core.js가 FIREBASE_URL·dbFetch·로그인 게이트를 선언하고 app.js(startApp)가 마지막. 순서 변경 금지
+     3. notice.js  — 공지사항 (dbFetch·JUNGLE_CONFIG 참조, 로그인 후 initNoticeData 호출됨)
+     ===================================================== -->
+<script src="config.js"></script>
+<script src="app-core.js"></script>
+<script src="app-news-data.js"></script>
+<script src="app-keywords.js"></script>
+<script src="app-gemini.js"></script>
+<script src="app-news-feed.js"></script>
+<script src="app-opcol.js"></script>
+<script src="app-news-view.js"></script>
+<script src="app-scrap-peer.js"></script>
+<script src="app-report-scrap.js"></script>
+<script src="app-archive-memo.js"></script>
+<script src="app-settings.js"></script>
+<script src="app-shell.js"></script>
+<script src="app-opinion.js"></script>
+<script src="app-shinpd-data.js"></script>
+<script src="app-shinpd-algo.js"></script>
+<script src="app-shinpd-persona.js"></script>
+<script src="app-shinpd-ytk.js"></script>
+<script src="app-shinpd-brief.js"></script>
+<script src="app-shinpd-issue.js"></script>
+<script src="app-shinpd.js"></script>
+<script src="app.js"></script>
+<script src="recommend.js"></script>
+<script src="notice.js"></script>
+<script src="pillnav.js"></script>
+<script src="app-float.js"></script>
+<script src="app-special.js"></script>
+
+<div id="swipeUndoToast" class="swipe-undo-toast" style="display:none;">
+  <span id="swipeToastText">기사를 버렸습니다</span>
+  <button id="swipeUndoBtn" class="toast-btn">되돌리기</button>
+</div>
+
+<div id="perfDebugBox" style="display:none;position:fixed;bottom:10px;left:10px;background:rgba(0,0,0,.75);color:#fff;
+  font-size:11px;padding:8px 10px;border-radius:8px;z-index:9999;font-family:monospace;line-height:1.6;
+  white-space:pre;max-width:60vw;pointer-events:none;touch-action:none;user-select:none;"></div>
+
+</body>
+</html>

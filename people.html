@@ -1,0 +1,1855 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SNS 모니터링</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<style>
+:root{--line:rgba(0,0,0,.10);--line-soft:rgba(0,0,0,.07);--bg:#f7f7f6;--ink:#202124;--faint:#5F6368;--blue:#18181b;--blue-soft:rgba(0,0,0,.06)}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{font-family:'Pretendard',-apple-system,BlinkMacSystemFont,'Malgun Gothic',sans-serif;background:#fff;color:var(--ink);-webkit-font-smoothing:antialiased;font-size:14px;display:flex;flex-direction:column;overflow:hidden}
+button,input,select,textarea{font-family:inherit}
+
+/* ===== 탭 (제목 자체가 탭 — 뉴스 모니터링 서브탭과 동일한 밑줄 스타일) ===== */
+/* 뉴스 모니터링의 .news-subtabs/.subtab-btn과 글자 크기·굵기·여백·밑줄 두께·정렬 기준을 완전히 동일하게 맞춤 */
+.snstabs{display:flex;flex:0 0 auto;border-bottom:1px solid var(--line-soft);padding:0 20px;background:#fff;align-items:flex-end;flex-wrap:wrap}
+.snstab{border:none;background:none;padding:10px 20px 11px;font-size:14px;font-weight:500;color:var(--faint);cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-1px;flex-shrink:0;white-space:nowrap}
+.snstab:hover{background:var(--bg);color:var(--ink)}
+.snstab.on{color:var(--blue);border-bottom-color:var(--blue)}
+.groupTab{border:none;background:none;padding:10px 14px 11px;font-size:14px;font-weight:500;color:var(--faint);cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-1px;display:inline-flex;align-items:center;gap:4px;flex-shrink:0;white-space:nowrap}
+.groupTab:hover{background:var(--bg);color:var(--ink)}
+.groupTab.on{color:var(--blue);border-bottom-color:var(--blue)}
+.groupTab .gx{opacity:0;font-size:13px;color:var(--faint);padding:0 2px;border-radius:4px}
+.groupTab:hover .gx{opacity:.6} .groupTab .gx:hover{opacity:1;background:#FCE8E6;color:#C5221F}
+.gAddBtn{border:1px dashed var(--line);background:none;color:#8B9096;width:28px;height:28px;border-radius:8px;cursor:pointer;align-self:center;margin-left:6px;font-size:15px;line-height:1}
+.gAddBtn:hover{border-color:var(--blue);color:var(--blue)}
+/* 알약형 내비(pill nav) — 2026-09-24 사장님 시안. index.html(style.css)의 .pill-nav와 같은 규격 */
+.snstabs{border-bottom:none;align-items:center;padding:12px 20px;gap:6px}
+.pill-nav{position:relative;display:inline-flex;align-items:center;gap:2px;max-width:100%;padding:5px;border-radius:999px;background:#fff;border:1px solid rgba(0,0,0,.08);box-shadow:0 10px 30px -6px rgba(0,0,0,.10);overflow-x:auto;scrollbar-width:none}
+.pill-nav::-webkit-scrollbar{display:none}
+.pill-nav #groupTabs{display:contents}
+/* 탭이 바깥 정글 헤더로 올라간 상태(PC) — 안쪽 탭 줄은 숨기고, 검색창이 없는 화면에선 줄 자체를 숨김 (2026-09-24) */
+body.tabs-in-parent .snstabs{display:none}   /* 검색창은 국회의원 화면(sns-tool.html) 안 맨 위로 내려가 스크롤과 함께 움직임 */
+.pill-nav .snstab,.pill-nav .groupTab{position:relative;z-index:1;border:none;border-radius:999px;background:none;margin:0;padding:9px 22px;font-size:14px;font-weight:600;color:#737373;transition:color .3s,background-color .3s}
+.pill-nav .snstab:hover,.pill-nav .groupTab:hover{background:none;color:#171717}
+.pill-nav .snstab.on,.pill-nav .groupTab.on{background:#18181b;color:#fff;box-shadow:0 2px 8px rgba(0,0,0,.18)}
+.pill-nav.has-ind .snstab.on,.pill-nav.has-ind .groupTab.on{background:none;box-shadow:none}
+.pill-nav .groupTab.on .gx{color:#fff}
+.pill-ind{position:absolute;left:0;top:0;z-index:0;pointer-events:none;border-radius:999px;background:#18181b;box-shadow:0 2px 8px rgba(0,0,0,.18);transition:transform .45s cubic-bezier(.34,1.36,.64,1),width .45s cubic-bezier(.34,1.36,.64,1)}
+.pill-ind.no-anim{transition:none}
+.gAddBtn{margin-left:0}
+/* 국회의원 쪽 검색·백업 — 원래 중첩 iframe(sns-tool.html) 안 자체 헤더에 있던 걸
+   공간 절약을 위해 탭 줄로 끌어올림. 실제 동작은 legacySearchAPI로 iframe 안 로직에 위임. */
+.legacy-search-bar{display:flex;gap:6px;align-items:center;padding:8px 0;}
+.legacy-search-bar input{
+  height:34px;border:1px solid var(--line);border-radius:10px;padding:0 14px;
+  font-size:13px;outline:none;background:var(--bg);width:220px;box-sizing:border-box;
+}
+.legacy-search-bar input:focus{border-color:var(--blue);background:#fff;box-shadow:0 0 0 3px rgba(0,0,0,.1);}
+.legacy-search-bar .btn{height:34px;}
+.legacy-icon-btn{width:34px;height:34px;padding:0;border-radius:10px;flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;}
+.legacy-icon-btn svg{width:16px;height:16px;}
+.pane{display:none;flex:1;min-height:0;overflow-y:auto}
+.pane.on{display:flex;flex-direction:column}
+.pane.on > *{flex:0 0 auto}
+
+/* ===== 공방(이슈 통합 분석) 탭 ===== */
+.dbAsk{max-width:720px;margin:20px 0 0;padding:0 20px;flex-shrink:0}
+.dbAskRow{display:flex;gap:8px;align-items:center}
+.dbAskRow input{border:1px solid var(--line);border-radius:8px;padding:8px 12px;font-size:13px;outline:none}
+.dbAskRow input#dbTopicInput{flex:1}
+.dbAskRow input:disabled{opacity:.55}
+.dbAskRow .btn:disabled{opacity:.55;cursor:default}
+.dbAskRow input.errShake{animation:dbShake .4s;border-color:#C5221F}
+@keyframes dbShake{0%,100%{transform:translateX(0)}20%{transform:translateX(-6px)}40%{transform:translateX(6px)}60%{transform:translateX(-4px)}80%{transform:translateX(4px)}}
+.dbNote{font-size:12px;color:var(--faint);line-height:1.6;margin:8px 0 0}
+.dbErr{color:#C5221F;font-size:12.5px;margin-top:8px}
+#dbBody{flex:1;min-height:0;overflow-y:auto;padding:0 20px 30px}
+.dbEmpty{max-width:720px;margin:40px auto;padding:0 20px;text-align:center;color:var(--faint);font-size:13px;line-height:1.8}
+.dbSpinner{width:22px;height:22px;border:2.5px solid var(--line);border-top-color:var(--ink);border-radius:50%;margin:0 auto 14px;animation:dbSpin .8s linear infinite}
+@keyframes dbSpin{to{transform:rotate(360deg)}}
+.dbStageList{max-width:400px;margin:14px auto 0;text-align:left;font-size:12.5px;color:var(--faint);line-height:2}
+.dbStageList .on{color:var(--ink);font-weight:600}
+.dbStageList .done{color:#1e8e3e}
+.dbNarrative{max-width:820px;margin:24px 20px 0;padding:20px 24px;background:#fff;border:1px solid var(--line);border-radius:12px;font-size:14px;line-height:1.85;text-align:left}
+.dbHeading{font-weight:800;font-size:15px;margin:18px 0 6px}
+.dbHeading:first-child{margin-top:0}
+.dbParagraph{white-space:pre-wrap;margin-bottom:4px}
+.dbNarrative .dbQuote{color:var(--blue);text-decoration:underline;text-underline-offset:2px}
+.dbNarrative .dbQuote:hover{opacity:.75}
+.dbSubtabs{display:flex;gap:6px;padding:16px 20px 0;flex-shrink:0}
+.dbSub{border:1px solid var(--line);background:#fff;color:var(--faint);font-size:13px;font-weight:600;padding:7px 16px;border-radius:8px;cursor:pointer}
+.dbSub.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+#dbHistView{padding:16px 20px 40px;max-width:900px}
+.dhEmpty{padding:40px 0;color:var(--faint);font-size:13px;line-height:1.8}
+.dh-row{border:1px solid var(--line);border-radius:12px;background:#fff;margin-bottom:10px;overflow:hidden}
+.dh-head{display:flex;align-items:center;gap:12px;width:100%;border:none;background:none;padding:14px 16px;cursor:pointer;text-align:left;font:inherit}
+.dh-head:hover{background:var(--bg)}
+.dh-name{font-weight:700;font-size:14px;flex-shrink:0;max-width:60%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dh-prev{flex:1;min-width:0;color:var(--faint);font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dh-caret{color:var(--faint);font-size:12px;flex-shrink:0}
+.dh-editor{border-top:1px solid var(--line-soft);padding:14px 16px 12px}
+.dh-title{width:100%;box-sizing:border-box;border:1px solid var(--line);border-radius:8px;padding:9px 12px;font-size:15px;font-weight:700;outline:none;margin-bottom:10px}
+.dh-toolbar{display:flex;flex-wrap:wrap;gap:4px;align-items:center;margin-bottom:8px}
+.dh-tb{border:1px solid var(--line);background:#fff;border-radius:6px;font-size:12px;padding:4px 9px;cursor:pointer;min-width:28px}
+.dh-tb:hover{background:var(--bg)}
+.dh-sep{width:1px;height:18px;background:var(--line);margin:0 4px}
+.dh-body{min-height:260px;border:1px solid var(--line);border-radius:8px;padding:14px 18px;font-size:14px;line-height:1.8;outline:none;background:#fff}
+.dh-body h3{font-size:16px;margin:16px 0 6px}
+.dh-body h3:first-child{margin-top:0}
+.dh-body h4{font-size:14px;margin:12px 0 4px;color:#333}
+.dh-body p{margin:4px 0}
+.dh-body a{color:var(--blue);text-decoration:underline;text-underline-offset:2px}
+.dh-body hr{border:none;border-top:1px solid #ccc;margin:14px 0}
+.dh-foot{display:flex;align-items:center;gap:6px;margin-top:10px}
+.dh-state{font-size:12px;color:var(--faint)}
+.dh-state.bad{color:#C5221F}
+.dh-spacer{flex:1}
+.dh-del{color:#C5221F}
+.dbWarn{max-width:820px;margin:18px 20px 0;padding:10px 14px;border-radius:10px;background:#FEF7E0;color:#8a5a00;font-size:12.5px;line-height:1.6}
+.dbScrapRow{max-width:820px;margin:14px 20px 0;display:flex;align-items:center;gap:10px}
+.dbScrapRow #dbScrapMsg{font-size:12px;color:var(--faint)}
+.dbSources{max-width:820px;margin:18px 20px 40px;padding:0 4px}
+.dbSourcesTitle{font-size:13px;font-weight:700;color:var(--faint);margin-bottom:8px;cursor:pointer;display:flex;align-items:center;gap:6px}
+.dbSourceGroup{margin-bottom:14px}
+.dbSourceGroup h4{font-size:12px;color:var(--faint);margin:0 0 6px;font-weight:700}
+.dbSourceItem{font-size:12.5px;padding:6px 0;border-bottom:1px solid var(--line-soft);display:flex;gap:8px}
+.dbSourceItem .who{font-weight:600;flex-shrink:0}
+.dbSourceItem a{color:var(--blue);text-decoration:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dbSourceItem a:hover{text-decoration:underline}
+#paneLegacy iframe{flex:1;min-height:0;width:100%;border:none;display:block}
+
+/* ===== 헤더 ===== */
+.header{background:#fff;border-bottom:1px solid var(--line);padding:14px 20px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;flex:0 0 auto}
+.header h1{font-size:17px;font-weight:700;margin:0;white-space:nowrap}
+.count{font-size:12px;color:var(--faint);white-space:nowrap}
+#q{flex:1;min-width:200px;max-width:380px;height:36px;border:1px solid var(--line);border-radius:10px;padding:0 16px;font-size:13px;outline:none;background:var(--bg);box-sizing:border-box}
+#q:focus{border-color:var(--blue);background:#fff;box-shadow:0 0 0 3px rgba(0,0,0,.1)}
+.btn{height:34px;border:1px solid var(--line);border-radius:10px;background:#fff;padding:0 14px;font-size:12.5px;cursor:pointer;font-weight:500;white-space:nowrap;display:inline-flex;align-items:center;justify-content:center;gap:5px;box-sizing:border-box}
+.btn:hover{background:var(--bg)}
+.btn.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.btn.primary{background:var(--blue);border-color:var(--blue);color:#fff;font-weight:600}
+.btn.primary:hover{background:#000}
+.btn.fb{background:#1877F2;border-color:#1877F2;color:#fff;font-weight:600}
+.btn.fb:hover{background:#166FE0}
+.btn.fb:disabled{background:#F1F3F4;border-color:var(--line);color:#BDC1C6;cursor:default}
+.btn.danger{color:#C5221F;border-color:#F5C6C4}
+.btn.danger:hover{background:#FCE8E6}
+.spacer{flex:1}
+select.btn{padding:0 8px}
+
+/* ===== 필터 ===== */
+.filters{padding:12px 20px;border-bottom:1px solid var(--line);display:flex;flex-direction:column;gap:12px;background:#fff}
+.fRow{display:flex;flex-wrap:wrap;gap:7px;align-items:center}
+.fIco{color:var(--faint);width:17px;height:17px;flex-shrink:0}
+.fWrap{display:flex;gap:7px;flex-wrap:wrap;flex:1}
+.fTag{height:32px;box-sizing:border-box;border:1px solid var(--line);border-radius:8px;background:#fff;padding:0 13px;font-size:13px;font-weight:500;color:var(--faint);cursor:pointer;display:inline-flex;align-items:center;gap:6px;user-select:none;white-space:nowrap}
+.fTag:hover{background:var(--bg)}
+.fTag.on{background:var(--blue);border-color:transparent;color:#fff}
+.fTag .cnt{background:var(--bg);color:#80868b;border-radius:6px;padding:1px 6px;font-size:10.5px;font-weight:600;min-width:18px;text-align:center}
+.fTag.on .cnt{background:rgba(255,255,255,.22);color:#fff}
+.fTag .dot{width:9px;height:9px;border-radius:50%;display:inline-block;flex-shrink:0}
+.fTag.dash{border-style:dashed;color:#8B9096}
+.fTag .rm{margin-left:2px;opacity:.45;font-size:13px}
+.fTag .rm:hover{opacity:1}
+.fNone{font-size:12px;color:#BDC1C6;padding-top:7px}
+.fReset{margin-left:6px}
+
+/* ===== 그리드 ===== */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px;padding:16px 20px 40px}
+.emptyMsg{text-align:center;padding:56px 20px;color:var(--faint);font-size:14px;line-height:1.8;background:var(--bg);border:1px dashed var(--line);border-radius:12px;margin:20px}
+.emptyMsg .sm{font-size:12px;color:#9AA0A6}
+
+/* ===== 카드 (국회의원 SNS 카드와 같은 가로형 외형) ===== */
+.grid{grid-template-columns:repeat(auto-fill,minmax(280px,1fr))!important}
+.card{position:relative;min-height:150px;background:#fff;border:1px solid var(--line);border-radius:12px;display:flex;align-items:flex-start;gap:12px;padding:11px 40px 11px 0;overflow:hidden;cursor:pointer;transition:box-shadow .15s,border-color .15s}
+.card:hover{border-color:var(--line);box-shadow:0 1px 8px rgba(0,0,0,.10)}
+.band{position:absolute;left:0;top:0;bottom:0;width:3px;border-radius:12px 0 0 12px}
+.cardin{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
+.star{position:absolute;right:8px;top:6px;font-size:15px;line-height:1;cursor:pointer;color:#DADCE0;z-index:2}
+.star.on{color:#F5B400}
+.edit{position:absolute;right:10px;bottom:9px;font-size:11px;color:#BDC1C6;cursor:pointer;z-index:2}
+.edit:hover{color:var(--ink)}
+.thumbwrap{flex-shrink:0;margin-left:14px}
+.thumb{width:50px;height:50px;border-radius:50%;object-fit:cover;background:var(--bg);border:1px solid var(--line)}
+.avatar{width:50px;height:50px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;color:#fff}
+.nm{font-size:14.5px;font-weight:600;color:var(--ink)}
+.tierwrap{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.tierCircle{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:var(--ink);color:#fff;font-size:12px;font-weight:700;flex-shrink:0}
+.orLabel{font-size:12px;color:var(--faint)}
+.desc{font-size:12.5px;color:#3C4043;line-height:1.45;word-break:keep-all}
+.tagrow{display:flex;flex-wrap:wrap;gap:5px;margin-top:2px}
+.tag{height:22px;border:none;border-radius:6px;padding:0 9px;font-size:11px;font-weight:500;color:var(--ink);display:inline-flex;align-items:center;background:var(--blue-soft)}
+.snsrow{display:flex;gap:6px;flex-wrap:wrap;margin-top:3px}
+.sns{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;text-decoration:none;color:#fff;font-size:10px;font-weight:700}
+.sns:hover{opacity:.82}
+
+/* ===== 페이스북 피드 ===== */
+#feedWrap{display:none;background:var(--bg);border-top:1px solid var(--line);padding-bottom:40px}
+.feedHead{position:sticky;top:0;z-index:30;background:#fff;border-bottom:1px solid var(--line);padding:13px 20px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.feedHead .ft{font-size:14px;font-weight:700}
+.feedHead .fs{font-size:12px;color:var(--faint)}
+.feedInner{max-width:1100px;margin:0 auto;padding:16px}
+.feedGrid{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}
+@media(max-width:900px){.feedGrid{grid-template-columns:1fr}}
+.fbCard{background:#fff;border:1px solid var(--line);border-radius:14px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.06);transition:opacity .2s}
+.fbCard.gone{display:none !important}
+.fbHead{padding:10px 14px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--line);font-size:13px;font-weight:700;gap:8px;background:#fff}
+.fbHead .who{display:flex;align-items:center;gap:7px;min-width:0}
+.fbHead .who img{width:24px;height:24px;border-radius:50%;object-fit:cover;flex-shrink:0}
+.fbHead .who .av{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;color:#fff;flex-shrink:0;font-weight:700}
+.fbHead .sub{font-size:11.5px;color:#8B9096;font-weight:400;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fbSkip{height:24px;border:1px solid var(--line);background:#fff;border-radius:12px;font-size:10.5px;padding:0 10px;cursor:pointer;color:#8B9096;flex-shrink:0}
+.fbSkip:hover{background:#FFF4CE;color:#B45309;border-color:#F5C878}
+.fbBody{background:#fff;overflow:hidden;position:relative;min-height:70px}
+.fbBody .fb-page,.fbBody .fb-page span,.fbBody .fb-page iframe{width:100% !important;max-width:100% !important}
+.fbNote{padding:24px 16px;text-align:center;font-size:12.5px;color:var(--faint);line-height:1.7}
+/* 개인 계정 카드 — Page Plugin 임베드 불가. 안내 + 방문 버튼 + 최신 글 텍스트. */
+.profileCardBody{padding:15px 15px 14px;display:flex;flex-direction:column;gap:11px;background:#fff}
+.profileNotice{font-size:12px;color:#6B7280;line-height:1.6;background:#F8F9FA;border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+.profileVisitBtn{align-self:flex-start;text-decoration:none;font-size:12px;font-weight:700;color:#fff;background:#1877F2;border:none;border-radius:9px;padding:8px 15px;cursor:pointer}
+.profileVisitBtn:hover{background:#166fe0}
+.profilePosts{display:flex;flex-direction:column;gap:8px}
+.profilePosts .ppLoading,.profilePosts .ppNote{font-size:11.5px;color:#9AA0A6}
+.profilePostsHead{font-size:11px;font-weight:700;color:#8B95A1;letter-spacing:.02em}
+.profilePost{font-size:12px;color:#202124;line-height:1.6;white-space:pre-wrap;word-break:break-word;border-left:2px solid #E4E6EB;padding:1px 0 1px 10px}
+.profilePost + .profilePost{border-top:1px dashed #EDEFF2;padding-top:8px}
+
+/* ===== 모달 ===== */
+.mask{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:100;align-items:center;justify-content:center;padding:16px}
+.mask.on{display:flex}
+.modal{background:#fff;border-radius:16px;width:100%;max-width:460px;max-height:92vh;overflow-y:auto;padding:22px;box-shadow:0 20px 25px -5px rgba(0,0,0,.10),0 8px 10px -6px rgba(0,0,0,.08)}
+.modal h3{font-size:16px;margin-bottom:16px;font-weight:700}
+.f{margin-bottom:13px}
+.frow{display:flex;gap:10px}
+.f label{display:block;font-size:12px;color:var(--faint);margin-bottom:5px;font-weight:600}
+.f input[type=text],.f textarea{width:100%;padding:8px 11px;border:1px solid var(--line);border-radius:8px;font-size:13px;outline:none}
+.f input:focus,.f textarea:focus{border-color:var(--blue)}
+.f textarea{resize:vertical;min-height:60px}
+.hint{font-size:11px;color:var(--faint);margin-top:4px;line-height:1.5}
+.radios{display:flex;flex-wrap:wrap;gap:6px}
+.radio{height:30px;padding:0 13px;border:1px solid var(--line);border-radius:8px;font-size:12.5px;cursor:pointer;user-select:none;display:inline-flex;align-items:center}
+.radio:hover{background:var(--bg)}
+.radio.on{background:var(--blue);border-color:transparent;color:#fff;font-weight:600}
+.photobox{display:flex;align-items:center;gap:14px}
+.photodrop{width:94px;height:94px;border-radius:50%;border:2px dashed #DADCE0;display:flex;align-items:center;justify-content:center;cursor:pointer;overflow:hidden;flex-shrink:0;background:var(--bg);text-align:center;font-size:11px;color:var(--faint);line-height:1.4}
+.photodrop.hover{border-color:var(--blue);background:var(--blue-soft)}
+.photodrop img{width:100%;height:100%;object-fit:cover}
+.linkrow{display:flex;gap:6px;margin-bottom:6px;align-items:center}
+.linkrow input{flex:1}
+.linkrow .k{font-size:10.5px;width:50px;text-align:center;color:#fff;border-radius:9px;padding:4px 0;flex-shrink:0;font-weight:700}
+.linkrow .del{cursor:pointer;color:#BDC1C6;font-size:16px;padding:0 3px}
+.linkrow .del:hover{color:#C5221F}
+.acts{display:flex;gap:8px;margin-top:20px}
+.toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 20px;border-radius:12px;font-size:13px;z-index:200;opacity:0;transition:opacity .25s;pointer-events:none}
+.toast.on{opacity:1}
+
+@media(max-width:640px){
+  body{overflow-x:hidden}
+  .grid{grid-template-columns:1fr;padding:12px 12px 30px}
+  .header,.filters{padding:12px}
+  #q{max-width:100%}
+  .snstabs{padding:0 14px}
+  .snstab{padding:11px 14px 12px;font-size:13px}
+  .groupTab{padding:11px 12px 12px;font-size:13px}
+  .snstabs{padding:10px 14px}
+  .pill-nav .snstab,.pill-nav .groupTab{padding:8px 15px;font-size:13px}
+  .snstabs .spacer{display:none}
+  /* 국회의원 검색·백업 줄은 탭 아래 독립 줄로 */
+  .legacy-search-bar{width:100%;padding:8px 0 10px;flex-wrap:wrap}
+  .legacy-search-bar input{flex:1;width:auto;min-width:0}
+  .feedHead{top:0;padding:12px}
+}
+
+/* 복사한 링크로 바로 스크랩 — 하단 확인 바 */
+</style>
+</head>
+<body>
+
+<div id="fb-root"></div>
+
+<div class="snstabs">
+  <div class="pill-nav">
+  <button class="snstab on" id="tabLegacy" onclick="showPane('legacy')">국회의원</button>
+  <button class="snstab" id="tabDebate" style="display:none" data-sunny-hidden="빼기 체크리스트 참고" onclick="showPane('debate')">떠든 사람들</button>
+  <span id="groupTabs"></span>
+  </div>
+  <button class="gAddBtn" id="gAddBtn" title="새 그룹 추가">＋</button>
+  <div class="spacer"></div>
+  <div id="legacySearchBar" class="legacy-search-bar">
+    <input type="text" id="legacyQ" placeholder="이름, 지역구, 상임위, 계파, 메모 검색">
+    <button class="btn" id="legacySearchBtn">검색</button>
+    <button class="btn legacy-icon-btn" id="legacyBackupBtn" title="현재 태그/티어/메모를 JSON으로 저장"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 16l-6-6h4V4h4v6h4l-6 6zm-7 2h14v2H5v-2z"/></svg></button>
+  </div>
+</div>
+
+<div class="pane on" id="paneLegacy">
+  <iframe id="legacyFrame" src="sns-tool.html" title="국회의원 SNS"></iframe>
+</div>
+
+<div class="pane" id="paneDebate">
+  <div class="dbSubtabs">
+    <button class="dbSub on" id="dbSubFind">떠든이 찾기</button>
+    <button class="dbSub" id="dbSubHist">떠든 히스토리</button>
+  </div>
+  <div id="dbFindView">
+  <div class="dbAsk">
+    <div class="dbAskRow">
+      <input type="text" id="dbTopicInput" placeholder="이슈 / 키워드 (예: 탄핵, 특정 기사 제목)">
+      <input type="number" id="dbDaysInput" value="7" min="1" style="width:60px">
+      <span>일</span>
+      <button class="btn primary" id="dbAskBtn">분석</button>
+    </div>
+    <p class="dbNote">등록된 의원 전원의 X·개인 페이스북과 관련 뉴스 기사를 모아 Gemini가 이슈 배경·시간순 공방 흐름을 정리합니다. 원문은 아래 출처 목록에 링크로 남습니다.</p>
+    <div class="dbErr" id="dbErr" style="display:none"></div>
+  </div>
+  <div id="dbBody"></div>
+  </div>
+  <div id="dbHistView" hidden>
+    <div id="dbHistList"></div>
+  </div>
+</div>
+
+<div class="pane" id="paneV2">
+  <div class="header">
+    <span class="count" id="count"></span>
+    <input id="q" type="text" placeholder="이름, 설명, 태그, 메모 검색" oninput="render()">
+    <button class="btn" id="starBtn" onclick="toggleStarOnly()">★ 관심만</button>
+    <select class="btn" id="sortSel" onchange="render()">
+      <option value="recent">최신 등록순</option>
+      <option value="name">이름순</option>
+      <option value="tier">티어순</option>
+    </select>
+    <button class="btn fb" id="feedBtn" onclick="openFeed()">포스팅 보기</button>
+    <div class="spacer"></div>
+    <button class="btn primary" onclick="openForm()">+ 인물 추가</button>
+  </div>
+
+  <div class="filters">
+    <div class="fRow"><svg class="fIco" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" style="fill:none" title="성향"><path stroke-linecap="round" stroke-linejoin="round" d="M6 13.5V3.75m0 9.75a1.5 1.5 0 0 1 0 3m0-3a1.5 1.5 0 0 0 0 3m0 3.75V16.5m12-3v-9.75m0 9.75a1.5 1.5 0 0 1 0 3m0-3a1.5 1.5 0 0 0 0 3m0 3.75V16.5m-6-9v-3.75m0 3.75a1.5 1.5 0 0 1 0 3m0-3a1.5 1.5 0 0 0 0 3m0 9.75V13.5"/></svg><div class="fWrap" id="orChips"></div></div>
+    <div class="fRow"><svg class="fIco" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" style="fill:none" title="티어"><path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z"/></svg><div class="fWrap" id="tierChips"></div></div>
+    <div class="fRow"><svg class="fIco" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" style="fill:none" title="태그"><path stroke-linecap="round" stroke-linejoin="round" d="M9.568 3H5.25A2.25 2.25 0 0 0 3 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 0 0 5.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 0 0 9.568 3Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M6 6h.008v.008H6V6Z"/></svg><div class="fWrap" id="tagChips"></div></div>
+  </div>
+
+  <div class="grid" id="grid"></div>
+  <div id="empty" style="display:none"></div>
+
+  <div id="feedWrap">
+    <div class="feedHead">
+      <div class="ft" id="feedTitle"></div>
+      <div class="fs" id="feedSub"></div>
+      <div class="spacer"></div>
+      <button class="btn" onclick="closeFeed()">닫기</button>
+    </div>
+    <div class="feedInner"><div class="feedGrid" id="feedGrid"></div></div>
+  </div>
+</div>
+
+<div class="mask" id="mask">
+  <div class="modal">
+    <h3 id="mTitle">인물 추가</h3>
+
+    <div class="f">
+      <label>프로필 사진</label>
+      <div class="photobox">
+        <div class="photodrop" id="drop">클릭 · 드래그<br>· Ctrl+V</div>
+        <button class="btn" onclick="clearPhoto()">사진 지우기</button>
+      </div>
+      <input type="file" id="file" accept="image/*" style="display:none">
+    </div>
+
+    <div class="f frow">
+      <div style="flex:2"><label>이름</label><input type="text" id="fName" placeholder="예: 홍길동"></div>
+      <div style="flex:1"><label>그룹</label><select id="fGroup" class="btn" style="width:100%"></select></div>
+    </div>
+
+    <div class="f">
+      <label>성향</label>
+      <div class="radios" id="fOr"></div>
+    </div>
+    <div class="f"><label>티어</label><div class="radios" id="fTier"></div></div>
+
+    <div class="f">
+      <label>태그</label>
+      <input type="text" id="fTags" placeholder="쉼표로 구분 · 예: 방송패널, 탈북단체">
+    </div>
+
+    <div class="f">
+      <label>SNS 링크</label>
+      <div id="linkList"></div>
+      <button class="btn" style="margin-top:4px" onclick="addLinkRow()">+ 링크 추가</button>
+    </div>
+
+    <div class="f"><label>메모</label><textarea id="fMemo" placeholder="한 줄 소개 · 자유 메모"></textarea></div>
+
+    <div class="acts">
+      <button class="btn danger" id="delBtn" onclick="removePerson()" style="display:none">삭제</button>
+      <div class="spacer"></div>
+      <button class="btn" onclick="closeForm()">취소</button>
+      <button class="btn primary" onclick="savePerson()">저장</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script async defer crossorigin="anonymous" src="https://connect.facebook.net/ko_KR/sdk.js#xfbml=1&version=v19.0"></script>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot, getDocs, getDoc, writeBatch }
+  from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+const FB_CONFIG = {
+  apiKey: "YOUR_FIREBASE_API_KEY",
+  authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+  projectId: "YOUR_PROJECT_ID",
+  storageBucket: "YOUR_PROJECT_ID.firebasestorage.app",
+  messagingSenderId: "YOUR_SENDER_ID",
+  appId: "YOUR_APP_ID"
+};
+
+const app = initializeApp(FB_CONFIG);
+const db  = getFirestore(app);
+
+/* 계정별 데이터 분리 — 메인 앱(app.js)이 localStorage에 심어준 uid로 경로 네임스페이스.
+   uid 없으면 'shared' = 기존 팀 공유 컬렉션 그대로(하위호환). */
+let SNS_NS = 'shared';
+try{ SNS_NS = localStorage.getItem('jungle_sns_client') || 'shared'; }catch(e){}
+const nsShared = (SNS_NS === 'shared');
+const peopleCol = () => nsShared ? collection(db, 'people_v2') : collection(db, 'sns_u', SNS_NS, 'people_v2');
+const peopleDoc = (id) => nsShared ? doc(db, 'people_v2', id) : doc(db, 'sns_u', SNS_NS, 'people_v2', id);
+const metaDoc = () => nsShared ? doc(db, 'people_v2_meta', 'config') : doc(db, 'sns_u', SNS_NS, 'people_v2_meta', 'config');
+
+// 계정 첫 진입 시 팀 공유 일반인 데이터를 이 계정 칸으로 1회 복사(시드)
+async function seedPeopleIfNeeded(){
+  if(nsShared) return;
+  try{
+    const flagRef = doc(db, 'sns_u', SNS_NS);
+    const flag = await getDoc(flagRef);
+    if(flag.exists() && flag.data() && flag.data()._peopleSeeded) return;
+    const [psnap, msnap] = await Promise.all([
+      getDocs(collection(db, 'people_v2')),
+      getDoc(doc(db, 'people_v2_meta', 'config'))
+    ]);
+    const batch = writeBatch(db);
+    psnap.forEach(d => batch.set(peopleDoc(d.id), d.data()));
+    if(msnap.exists()) batch.set(metaDoc(), msnap.data());
+    batch.set(flagRef, { _peopleSeeded:true }, { merge:true });
+    await batch.commit();
+    console.log('[people seed] 팀 공유 ' + psnap.size + '건 → 계정 칸 복사 완료');
+  }catch(e){ console.warn('[people seed] 실패(계속 진행)', e); }
+}
+const AUTO_SHOW_LIMIT = 30;   // 이 수 이하면 필터 없이도 전원 표시
+
+/* ===== 상태 ===== */
+let people = [];
+let orientations = ["진보","보수","중도","기타"];
+let groups = ["일반인"];          // 동적 그룹 탭 (일반인·지자체장·시의회 등). meta에 저장.
+let activeGroup = "일반인";
+const DEFAULT_GROUP = "일반인";
+const groupOf = (p) => p.group || DEFAULT_GROUP;   // 기존 데이터는 group 없음 = 일반인
+let filter = { ors:[], tier:null, tags:[], star:false };
+let editingId = null;
+let photoData = "";
+let links = [];
+let currentList = [];
+let feedOpen = false;
+let feedSkipped = new Set();
+
+/* ===== 성향 ===== */
+const OR_COLOR = { "진보":"#1A73E8", "보수":"#D93025", "중도":"#80868B", "기타":"#8430CE" };
+const EXTRA_COLORS = ["#00897B","#E8710A","#7CB342","#C2185B","#5E35B1","#0097A7"];
+function orColor(name){
+  if(OR_COLOR[name]) return OR_COLOR[name];
+  const i = orientations.indexOf(name);
+  return EXTRA_COLORS[(i<0?0:i) % EXTRA_COLORS.length];
+}
+// 저장 형식이 문자열이든 배열이든 항상 배열로 읽는다 (구버전 데이터 호환)
+function orsOf(p){
+  if(Array.isArray(p.orientations)) return p.orientations;
+  if(p.orientation) return [p.orientation];
+  return ["기타"];
+}
+function bandStyle(p){
+  const list = orsOf(p);
+  if(list.length <= 1) return `background:${orColor(list[0]||"기타")}`;
+  const step = 100 / list.length;
+  const stops = list.map((o,i)=>`${orColor(o)} ${i*step}%, ${orColor(o)} ${(i+1)*step}%`).join(", ");
+  return `background:linear-gradient(to bottom, ${stops})`;
+}
+
+/* ===== SNS 판별 ===== */
+const SNS_DEF = [
+  { key:"facebook",  label:"FB", color:"#1877F2", m:/facebook\.com|fb\.com|fb\.me/i },
+  { key:"x",         label:"X",  color:"#000000", m:/twitter\.com|(^|\/\/)(www\.)?x\.com/i },
+  { key:"youtube",   label:"YT", color:"#FF0000", m:/youtube\.com|youtu\.be/i },
+  { key:"instagram", label:"IG", color:"#C13584", m:/instagram\.com/i },
+  { key:"threads",   label:"TH", color:"#101010", m:/threads\.(net|com)/i },
+  { key:"naver",     label:"BL", color:"#03C75A", m:/blog\.naver\.com|post\.naver\.com|cafe\.naver\.com/i },
+  { key:"tistory",   label:"TS", color:"#EB531F", m:/tistory\.com/i },
+  { key:"kakao",     label:"KK", color:"#FEE500", m:/brunch\.co\.kr|story\.kakao/i },
+  { key:"telegram",  label:"TG", color:"#229ED9", m:/t\.me|telegram\./i },
+  { key:"etc",       label:"WEB",color:"#5F6368", m:/.*/ }
+];
+function detectSns(url){
+  if(!url) return SNS_DEF[SNS_DEF.length-1];
+  return SNS_DEF.find(d => d.m.test(url)) || SNS_DEF[SNS_DEF.length-1];
+}
+function normUrl(u){
+  u = (u||"").trim();
+  if(!u) return "";
+  if(!/^https?:\/\//i.test(u)) u = "https://" + u;
+  return u;
+}
+function fbUrlOf(p){
+  const l = (p.links||[]).find(l => detectSns(l.url).key === "facebook");
+  return l ? l.url : "";
+}
+// Facebook Page Plugin은 '페이지'만 임베드 가능 — 개인 프로필은 하얀 빈 박스가 된다.
+function isEmbeddableFb(url){
+  if(!url) return false;
+  let path;
+  try{ path = new URL(url, "https://www.facebook.com").pathname.replace(/^\/+|\/+$/g,""); }
+  catch(e){ path = String(url); }
+  if(!path) return false;
+  if(/^profile\.php/i.test(path)) return false;
+  if(/^(people|pages)\//i.test(path)) return false;
+  return !path.split("/")[0].includes(".");   // 점 들어간 vanity = 개인 프로필
+}
+const FB_WORKER = "https://naver-news-proxy.YOUR-ACCOUNT.workers.dev";
+function fbVanity(url){
+  try{
+    const u = new URL(url, "https://www.facebook.com");
+    const id = u.searchParams.get("id");
+    if(/profile\.php/i.test(u.pathname) && id) return id;
+    return u.pathname.replace(/^\/+|\/+$/g,"").split("/")[0] || "";
+  }catch(e){ return ""; }
+}
+// 개인 계정 카드의 "최신 글" 영역을 Worker(/fbposts)에서 채운다. FB_COOKIE 미설정이면 조용히 버튼만.
+async function loadProfilePosts(){
+  const boxes = [...document.querySelectorAll("#feedGrid .profilePosts[data-fb-vanity]")];
+  for(let i=0;i<boxes.length;i++){
+    const box = boxes[i], v = box.dataset.fbVanity;
+    if(!v){ box.innerHTML = '<span class="ppNote">주소를 인식하지 못했습니다</span>'; continue; }
+    if(i>0) await new Promise(r=>setTimeout(r,450));
+    try{
+      const j = await (await fetch(FB_WORKER + "/fbposts?u=" + encodeURIComponent(v))).json();
+      if(j && j.needsCookie){ box.innerHTML = ""; continue; }
+      const posts = (j && j.posts) || [];
+      if(!posts.length){ box.innerHTML = '<span class="ppNote">최근 글을 가져오지 못했습니다</span>'; continue; }
+      box.innerHTML = '<div class="profilePostsHead">최신 글</div>'
+        + posts.slice(0,5).map(p=>`<div class="profilePost">${esc(p.text||"")}</div>`).join("");
+    }catch(e){ box.innerHTML = '<span class="ppNote">최근 글을 가져오지 못했습니다</span>'; }
+  }
+}
+
+/* ===== 유틸 ===== */
+function toast(msg){
+  const t = document.getElementById("toast");
+  t.textContent = msg; t.classList.add("on");
+  clearTimeout(t._tid);
+  t._tid = setTimeout(()=>t.classList.remove("on"), 2200);
+}
+
+
+function esc(s){
+  return String(s==null?"":s).replace(/[&<>"']/g, c =>
+    ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+function avatarColor(name){
+  const palette = ["#5E6C84","#1A73E8","#D93025","#00897B","#8430CE","#E8710A","#C2185B","#0097A7"];
+  let h = 0;
+  for(const ch of (name||"?")) h = (h*31 + ch.charCodeAt(0)) >>> 0;
+  return palette[h % palette.length];
+}
+function isFiltered(){
+  return filter.ors.length>0 || filter.tier!==null || filter.tags.length>0
+      || filter.star || (document.getElementById("q").value||"").trim()!=="";
+}
+
+/* ===== 서브탭 ===== */
+window.showPane = function(which, groupName){
+  const isLegacy = (which === "legacy");
+  const isDebate = (which === "debate");
+  document.getElementById("paneV2").classList.toggle("on", !isLegacy && !isDebate);
+  document.getElementById("paneLegacy").classList.toggle("on", isLegacy);
+  document.getElementById("paneDebate").classList.toggle("on", isDebate);
+  document.getElementById("tabLegacy").classList.toggle("on", isLegacy);
+  document.getElementById("tabDebate").classList.toggle("on", isDebate);
+  const bar = document.getElementById("legacySearchBar");
+  if(bar) bar.style.display = isLegacy ? "flex" : "none";
+  if(!isLegacy && !isDebate && groupName){ activeGroup = groupName; }
+  renderGroupTabs();
+  if(isLegacy){
+    // 국회의원 탭 = 새로고침 버튼: 필터·선택이 꼬여서 생기는 잔 오류를 떨어내려고
+    // 매번 iframe을 처음(아무 필터도 없는) 상태로 다시 로드한다.
+    const f = document.getElementById("legacyFrame");
+    if(f){ try{ f.contentWindow.location.replace("sns-tool.html"); }catch(e){ f.src = "sns-tool.html"; } }
+  }else if(!isDebate){
+    resetFilter(); render();
+  }
+};
+
+function renderGroupTabs(){
+  const box = document.getElementById("groupTabs");
+  if(!box) return;
+  const legacyOn = document.getElementById("tabLegacy").classList.contains("on");
+  const debateOn = document.getElementById("tabDebate").classList.contains("on");
+  box.innerHTML = groups.map(g=>
+    `<button class="groupTab${(!legacyOn && !debateOn && g===activeGroup)?' on':''}" data-group="${esc(g)}">${esc(g)}`
+    + (groups.length>1 ? `<span class="gx" data-group-del="${esc(g)}" title="그룹 삭제">✕</span>` : '')
+    + `</button>`
+  ).join("");
+  box.querySelectorAll("[data-group]").forEach(b=> b.onclick = (e)=>{
+    if(e.target.closest("[data-group-del]")) return;
+    showPane("group", b.dataset.group);
+  });
+  box.querySelectorAll("[data-group-del]").forEach(x=> x.onclick = (e)=>{ e.stopPropagation(); removeGroup(x.dataset.groupDel); });
+  publishTabsToParent();
+}
+
+/* ===== 탭을 바깥 정글 헤더로 올려 보여주기 (2026-09-24 헤더 통합, PC 전용) =====
+   바깥(index.html)이 탭 목록을 받아 상단 헤더에 같은 모양으로 그리고, 클릭은 메시지로 돌려보낸다.
+   바깥이 "헤더 모드"를 켜면 이 안의 탭 줄은 숨김(국회의원 검색창만 남김). */
+function publishTabsToParent(){
+  if(window.parent === window) return;
+  const legacyOn = document.getElementById("tabLegacy").classList.contains("on");
+  const debateOn = document.getElementById("tabDebate").classList.contains("on");
+  const tabs = [
+    { key:"legacy", label:"국회의원", on:legacyOn },
+    { key:"debate", label:"떠든 사람들", on:debateOn },
+    ...groups.map(g=>({ key:"group", group:g, label:g, on:(!legacyOn && !debateOn && g===activeGroup), deletable:groups.length>1 })),
+  ];
+  window.parent.postMessage({ type:"jungle-sns-tabs", tabs }, location.origin);
+}
+// 헤더 모드(PC)에선 국회의원 검색창을 안쪽 sns-tool.html 맨 위에 보이게 함 — 고정 줄이 아니라 스크롤과 함께 올라감
+function applyInlineSearch(){
+  try{
+    const doc = document.getElementById("legacyFrame")?.contentDocument;
+    if(doc && doc.body) doc.body.classList.toggle("inline-search", document.body.classList.contains("tabs-in-parent"));
+  }catch(e){}
+}
+document.getElementById("legacyFrame")?.addEventListener("load", applyInlineSearch);   // 국회의원 탭 누를 때마다 다시 로드됨
+window.addEventListener("message", (e)=>{
+  if(e.origin !== location.origin || e.source !== window.parent) return;
+  const d = e.data || {};
+  if(d.type === "jungle-sns-header-mode"){ document.body.classList.toggle("tabs-in-parent", !!d.on); applyInlineSearch(); }
+  else if(d.type === "jungle-sns-tab-click") showPane(d.key, d.group);
+  else if(d.type === "jungle-sns-add-group") addGroup();
+  else if(d.type === "jungle-sns-del-group") removeGroup(d.group);
+});
+
+async function saveGroups(){
+  try{ await setDoc(metaDoc(), { groups }, { merge:true }); }catch(e){ console.error(e); toast("그룹 저장 실패"); }
+}
+window.addGroup = async function(){
+  const v = (prompt("새 그룹 이름 (예: 지자체장, 시의회)") || "").trim();
+  if(!v) return;
+  if(groups.includes(v)){ toast("이미 있는 그룹"); return; }
+  groups = [...groups, v];
+  await saveGroups();
+  showPane("group", v);
+};
+async function removeGroup(name){
+  if(groups.length <= 1){ toast("마지막 그룹은 삭제할 수 없어요"); return; }
+  const n = people.filter(p=> groupOf(p) === name).length;
+  if(!confirm(`"${name}" 그룹을 삭제할까요?` + (n ? `\n이 그룹의 인물 ${n}명은 "${groups.find(g=>g!==name)}" 그룹으로 옮겨집니다.` : ""))) return;
+  const fallback = groups.find(g=> g !== name);
+  groups = groups.filter(g=> g !== name);
+  await saveGroups();
+  // 그 그룹 인물들을 fallback으로 이동
+  for(const p of people.filter(x=> groupOf(x) === name)){
+    try{ await setDoc(peopleDoc(p.id), { group: fallback }, { merge:true }); }catch(e){}
+  }
+  if(activeGroup === name) activeGroup = fallback;
+  showPane("group", activeGroup);
+}
+
+/* ===== 국회의원 검색·백업 (탭 줄로 옮긴 컨트롤 → sns-tool.html iframe에 위임) ===== */
+function legacyApi(){
+  const win = document.getElementById("legacyFrame")?.contentWindow;
+  return win && win.legacySearchAPI;
+}
+(function(){
+  const qEl = document.getElementById("legacyQ");
+  const searchBtn = document.getElementById("legacySearchBtn");
+  const backupBtn = document.getElementById("legacyBackupBtn");
+  const doSearch = ()=>{ const api = legacyApi(); if(!api) return; api.setQuery(qEl.value); api.search(); };
+  qEl?.addEventListener("keydown", (e)=>{
+    if(e.key === "Enter") doSearch();
+    else if(e.key === "Escape"){ qEl.value = ""; legacyApi()?.clear(); }
+  });
+  searchBtn?.addEventListener("click", doSearch);
+  backupBtn?.addEventListener("click", ()=> legacyApi()?.backup());
+})();
+
+/* ===== 로드 ===== */
+async function boot(){
+  await seedPeopleIfNeeded();   // 계정 첫 진입 시 팀 공유 데이터 시드 후 구독 시작
+  try{
+    onSnapshot(metaDoc(), snap=>{
+      const d = snap.exists() ? snap.data() : {};
+      if(Array.isArray(d.orientations)) orientations = d.orientations;
+      if(Array.isArray(d.groups) && d.groups.length) groups = d.groups;
+      if(!groups.includes(activeGroup)) activeGroup = groups[0];
+      renderGroupTabs(); renderChips();
+    }, err=>{ console.error(err); toast("설정 로드 실패"); });
+
+    onSnapshot(peopleCol(), snap=>{
+      people = [];
+      snap.forEach(d => people.push({ id:d.id, ...d.data() }));
+      renderGroupTabs(); renderChips(); render();
+    }, err=>{ console.error(err); toast("Firestore 연결 실패 — 규칙을 확인하세요"); });
+  }catch(e){
+    console.error(e); toast("Firestore 초기화 실패");
+  }
+}
+
+/* ===== 필터 칩 ===== */
+function renderChips(){
+  const orCount = {}, tierCount = {}, tagCount = {};
+  people.filter(p=> groupOf(p) === activeGroup).forEach(p=>{
+    orsOf(p).forEach(o => orCount[o] = (orCount[o]||0)+1);
+    if(p.tier!=null) tierCount[p.tier] = (tierCount[p.tier]||0)+1;
+    (p.tags||[]).forEach(t => tagCount[t] = (tagCount[t]||0)+1);
+  });
+
+  const oc = document.getElementById("orChips");
+  oc.innerHTML = "";
+  orientations.forEach(o=>{
+    const b = document.createElement("div");
+    b.className = "fTag" + (filter.ors.includes(o) ? " on":"");
+    const removable = !["진보","보수","중도","기타"].includes(o);
+    b.innerHTML = `<span class="dot" style="background:${orColor(o)}"></span>${esc(o)}`
+      + `<span class="cnt">${orCount[o]||0}</span>`
+      + (removable ? '<span class="rm" title="이 성향 삭제">×</span>' : '');
+    b.onclick = ev=>{
+      if(ev.target.classList.contains("rm")){ ev.stopPropagation(); removeOrientation(o); return; }
+      const i = filter.ors.indexOf(o);
+      if(i<0) filter.ors.push(o); else filter.ors.splice(i,1);
+      renderChips(); render();
+    };
+    oc.appendChild(b);
+  });
+  const addB = document.createElement("div");
+  addB.className = "fTag dash"; addB.textContent = "+ 성향 추가";
+  addB.onclick = addOrientation;
+  oc.appendChild(addB);
+
+  const tc = document.getElementById("tierChips");
+  tc.innerHTML = "";
+  [1,2,3].forEach(t=>{
+    const b = document.createElement("div");
+    b.className = "fTag" + (filter.tier===t ? " on":"");
+    b.innerHTML = `T${t}<span class="cnt">${tierCount[t]||0}</span>`;
+    b.onclick = ()=>{ filter.tier = (filter.tier===t ? null : t); renderChips(); render(); };
+    tc.appendChild(b);
+  });
+
+  const gc = document.getElementById("tagChips");
+  gc.innerHTML = "";
+  // 현재 활성 태그 필터는 카운트 0이어도 칩을 유지 — 안 그러면 데이터가 바뀌어 그 태그가
+  // 사라졌을 때 필터만 켜진 채 칩이 없어져 해제 못 하는 유령 필터가 됨.
+  const allTags = [...new Set([...Object.keys(tagCount), ...filter.tags])].sort((a,b)=>a.localeCompare(b,"ko"));
+  if(allTags.length === 0){
+    gc.innerHTML = '<span class="fNone">등록된 태그 없음</span>';
+  }
+  allTags.forEach(t=>{
+    const b = document.createElement("div");
+    b.className = "fTag" + (filter.tags.includes(t) ? " on":"");
+    b.innerHTML = `${esc(t)}<span class="cnt">${tagCount[t]||0}</span>`;
+    b.onclick = ()=>{
+      const i = filter.tags.indexOf(t);
+      if(i<0) filter.tags.push(t); else filter.tags.splice(i,1);
+      renderChips(); render();
+    };
+    gc.appendChild(b);
+  });
+
+  if(isFiltered()){
+    const r = document.createElement("button");
+    r.className = "btn fReset"; r.textContent = "필터 해제";
+    r.onclick = resetFilter;
+    gc.appendChild(r);
+  }
+}
+
+window.resetFilter = function(){
+  filter = { ors:[], tier:null, tags:[], star:false };
+  document.getElementById("q").value = "";
+  document.getElementById("starBtn").classList.remove("on");
+  renderChips(); render();
+};
+
+async function addOrientation(){
+  const v = (prompt("추가할 성향 이름") || "").trim();
+  if(!v) return;
+  if(orientations.includes(v)){ toast("이미 있는 성향입니다"); return; }
+  orientations = [...orientations, v];
+  try{
+    await setDoc(metaDoc(), { orientations }, { merge:true });
+    renderChips(); toast("성향 추가됨");
+  }catch(e){ console.error(e); toast("성향 저장 실패"); }
+}
+async function removeOrientation(name){
+  const used = people.filter(p => orsOf(p).includes(name)).length;
+  if(used > 0){ toast(`"${name}" 성향 인물이 ${used}명 있어 삭제할 수 없습니다`); return; }
+  if(!confirm(`"${name}" 성향을 삭제할까요?`)) return;
+  orientations = orientations.filter(o => o !== name);
+  filter.ors = filter.ors.filter(o => o !== name);
+  try{
+    await setDoc(metaDoc(), { orientations }, { merge:true });
+    renderChips(); render();
+  }catch(e){ console.error(e); toast("성향 삭제 실패"); }
+}
+
+window.toggleStarOnly = function(){
+  filter.star = !filter.star;
+  document.getElementById("starBtn").classList.toggle("on", filter.star);
+  renderChips(); render();
+};
+
+/* ===== 렌더 ===== */
+window.render = function(){
+  const q = (document.getElementById("q").value || "").trim().toLowerCase();
+  const sort = document.getElementById("sortSel").value;
+  const groupPeople = people.filter(p=> groupOf(p) === activeGroup);
+
+  let list = groupPeople.filter(p=>{
+    if(filter.ors.length && !filter.ors.some(o => orsOf(p).includes(o))) return false;
+    if(filter.tier !== null && Number(p.tier) !== filter.tier) return false;
+    if(filter.tags.length && !filter.tags.every(t => (p.tags||[]).includes(t))) return false;
+    if(filter.star && !p.interest) return false;
+    if(q){
+      const hay = [p.name, p.desc, p.memo, ...(p.tags||[])].join(" ").toLowerCase();
+      if(!hay.includes(q)) return false;
+    }
+    return true;
+  });
+
+  list.sort((a,b)=>{
+    if(sort === "name")  return (a.name||"").localeCompare(b.name||"","ko");
+    if(sort === "tier")  return (Number(a.tier)||9) - (Number(b.tier)||9)
+                             || (a.name||"").localeCompare(b.name||"","ko");
+    return (b.createdAt||0) - (a.createdAt||0);
+  });
+
+  // 인물이 많고 필터도 없으면 카드를 그리지 않는다
+  const holdBack = (!isFiltered() && groupPeople.length > AUTO_SHOW_LIMIT);
+  currentList = holdBack ? [] : list;
+
+  document.getElementById("count").textContent =
+    isFiltered() ? `${list.length} / ${groupPeople.length}명` : `${activeGroup} ${groupPeople.length}명`;
+
+  const fbCount = currentList.filter(p => fbUrlOf(p)).length;
+  const fbBtn = document.getElementById("feedBtn");
+  fbBtn.textContent = `포스팅 보기 (${fbCount})`;
+  fbBtn.disabled = (fbCount === 0);
+
+  const grid = document.getElementById("grid");
+  const emptyBox = document.getElementById("empty");
+  grid.innerHTML = "";
+
+  if(holdBack){
+    grid.style.display = "none";
+    emptyBox.style.display = "block";
+    emptyBox.innerHTML = `<div class="emptyMsg">필터를 선택하세요
+      <div class="sm">성향·티어·태그·검색 중 하나를 고르면 인물 카드가 나타납니다<br>${esc(activeGroup)} ${groupPeople.length}명</div></div>`;
+    if(feedOpen) closeFeed();
+    return;
+  }
+  if(list.length === 0){
+    grid.style.display = "none";
+    emptyBox.style.display = "block";
+    emptyBox.innerHTML = groupPeople.length === 0
+      ? `<div class="emptyMsg">"${esc(activeGroup)}" 그룹에 인물이 없습니다<div class="sm">우측 상단 <b>+ 인물 추가</b>로 시작하세요</div></div>`
+      : '<div class="emptyMsg">조건에 맞는 인물이 없습니다</div>';
+    if(feedOpen) closeFeed();
+    return;
+  }
+  grid.style.display = "grid";
+  emptyBox.style.display = "none";
+
+  list.forEach(p=>{
+    const card = document.createElement("div");
+    card.className = "card";
+    const photo = p.photo
+      ? `<img class="thumb" src="${p.photo}" alt="" loading="lazy">`
+      : `<div class="avatar" style="background:${avatarColor(p.name)}">${esc((p.name||"?").charAt(0))}</div>`;
+    const tags = (p.tags||[]).map(t=>`<span class="tag">${esc(t)}</span>`).join("");
+    const sns = (p.links||[]).map(l=>{
+      const d = detectSns(l.url);
+      const dark = (d.color.toUpperCase() === "#FEE500");
+      return `<a class="sns" href="${esc(l.url)}" target="_blank" rel="noopener"
+                 style="background:${d.color}${dark?';color:#202124':''}" title="${esc(l.url)}">${d.label}</a>`;
+    }).join("");
+
+    card.innerHTML = `
+      <div class="band" style="${bandStyle(p)}"></div>
+      <div class="star ${p.interest?'on':''}" data-star="${p.id}">★</div>
+      <div class="thumbwrap">${photo}</div>
+      <div class="cardin">
+        <div class="nm">${esc(p.name)}</div>
+        <div class="tierwrap">
+          <span class="tierCircle">${p.tier==null?"-":p.tier}</span>
+          <span class="orLabel">${esc(orsOf(p).join(" · "))}</span>
+        </div>
+        ${p.desc ? `<div class="desc">${esc(p.desc)}</div>` : ""}
+        ${sns ? `<div class="snsrow">${sns}</div>` : ""}
+        ${tags ? `<div class="tagrow">${tags}</div>` : ""}
+      </div>
+      <div class="edit" data-edit="${p.id}">편집</div>`;
+    card.onclick = (e)=>{ if(e.target.closest('[data-star]')||e.target.closest('.sns')) return; openForm(p.id); };
+    grid.appendChild(card);
+  });
+
+  grid.querySelectorAll("[data-star]").forEach(el=>{ el.onclick = () => toggleStar(el.dataset.star); });
+  grid.querySelectorAll("[data-edit]").forEach(el=>{ el.onclick = () => openForm(el.dataset.edit); });
+
+  if(feedOpen) drawFeed();   // 필터가 바뀌면 포스팅도 따라간다
+};
+
+async function toggleStar(id){
+  const p = people.find(x=>x.id===id);
+  if(!p) return;
+  try{ await setDoc(peopleDoc(id), { interest: !p.interest }, { merge:true }); }
+  catch(e){ console.error(e); toast("저장 실패"); }
+}
+
+/* ===== 페이스북 피드 ===== */
+window.openFeed = function(){
+  feedOpen = true;
+  drawFeed();
+  requestAnimationFrame(()=>{
+    document.getElementById("feedWrap").scrollIntoView({ behavior:"smooth", block:"start" });
+  });
+};
+window.closeFeed = function(){
+  feedOpen = false;
+  document.getElementById("feedWrap").style.display = "none";
+  document.getElementById("feedGrid").innerHTML = "";
+};
+
+function drawFeed(){
+  const allFb = currentList.filter(p => fbUrlOf(p) && !feedSkipped.has(p.id));
+  const pageP = allFb.filter(p => isEmbeddableFb(fbUrlOf(p))).slice(0, 24);
+  const profileP = allFb.filter(p => !isEmbeddableFb(fbUrlOf(p))).slice(0, 24);
+  const wrap = document.getElementById("feedWrap");
+  if(allFb.length === 0){ closeFeed(); return; }
+
+  wrap.style.display = "block";
+  document.getElementById("feedTitle").textContent = `페이스북 포스팅 — ${allFb.length}명`
+    + (profileP.length > 0 ? ` · 개인계정 ${profileP.length}명 포함` : "");
+  document.getElementById("feedSub").textContent = "";
+
+  const avOf = (p)=> p.photo
+    ? `<img src="${p.photo}" alt="" loading="lazy">`
+    : `<span class="av" style="background:${avatarColor(p.name)}">${esc((p.name||"?").charAt(0))}</span>`;
+
+  const box = document.getElementById("feedGrid");
+  box.innerHTML = pageP.map(p=>{
+    const url = fbUrlOf(p);
+    return `
+      <div class="fbCard" data-fbcard="${p.id}">
+        <div class="fbHead">
+          <div class="who">${avOf(p)}<span>${esc(p.name)}</span><span class="sub">${esc(p.desc||"")}</span></div>
+          <div style="display:flex;gap:5px;flex-shrink:0">
+            <button class="fbSkip" data-skip="${p.id}" title="이번 세션에서만 숨김">빼기</button>
+          </div>
+        </div>
+        <div class="fbBody" data-body="${p.id}" data-url="${esc(url)}">
+          <div class="fbNote">불러오는 중…</div>
+          <div class="fb-page" data-href="${esc(url)}" data-tabs="timeline"
+               data-width="500" data-height="700" data-small-header="true"
+               data-adapt-container-width="true" data-hide-cover="false"
+               data-show-facepile="false">
+            <blockquote cite="${esc(url)}" class="fb-xfbml-parse-ignore">
+              <a href="${esc(url)}" target="_blank" rel="noopener">${esc(p.name)}</a>
+            </blockquote>
+          </div>
+        </div>
+      </div>`;
+  }).join("") + profileP.map(p=>{
+    const url = fbUrlOf(p);
+    return `
+      <div class="fbCard profileCard" data-fbcard="${p.id}">
+        <div class="fbHead">
+          <div class="who">${avOf(p)}<span>${esc(p.name)}</span><span class="sub">${esc(p.desc||"")}</span></div>
+          <div style="display:flex;gap:5px;flex-shrink:0">
+            <button class="fbSkip" data-skip="${p.id}" title="이번 세션에서만 숨김">빼기</button>
+          </div>
+        </div>
+        <div class="profileCardBody">
+          <div class="profileNotice">이 인물은 팬페이지가 아닌 <b>개인 계정</b>으로 피드를 불러올 수 없습니다.</div>
+          <a class="profileVisitBtn" href="${esc(url)}" target="_blank" rel="noopener">직접 피드 방문하기 ↗</a>
+          <div class="profilePosts" data-fb-vanity="${esc(fbVanity(url))}"><span class="ppLoading">최신 글 불러오는 중…</span></div>
+        </div>
+      </div>`;
+  }).join("");
+
+  box.querySelectorAll("[data-skip]").forEach(b=>{
+    b.onclick = ()=>{ feedSkipped.add(b.dataset.skip); drawFeed(); };
+  });
+  loadProfilePosts();
+
+  if(window.FB && window.FB.XFBML) window.FB.XFBML.parse(box);
+  else setTimeout(()=>{ if(window.FB && window.FB.XFBML) window.FB.XFBML.parse(box); }, 900);
+
+  setTimeout(()=>checkFeed(false), 6000);
+  setTimeout(()=>checkFeed(true), 12000);
+}
+
+// FB 임베드는 크로스오리진이라 "빈 iframe"과 "정상 iframe"을 구분할 수 없다.
+// ok(iframe 존재)면 로딩 문구 제거, 아니면(최종) "못 불러옴" 문구로 교체. 숨기지 않는다.
+// 어느 경우든 카드에 fbSkip("빼기")·본문 하단 링크로 원문 이동 가능.
+function checkFeed(isFinal){
+  document.querySelectorAll(".fbCard").forEach(card=>{
+    if(card.classList.contains("profileCard")) return;   // 개인 계정 카드는 판정 제외
+    const body = card.querySelector(".fbBody");
+    if(!body || body.dataset.done) return;
+    const page = body.querySelector(".fb-page");
+    const ifr = page ? page.querySelector("iframe") : null;
+    const note = body.querySelector(".fbNote");
+    if(ifr && (ifr.src||"").includes("facebook.com")){
+      if(note) note.remove();
+      body.dataset.done = "1";
+    }else if(isFinal){
+      const url = body.dataset.url || "";
+      body.innerHTML = `<div class="fbNote">피드를 불러오지 못했습니다<br><span style="font-size:11.5px">페이스북 로그인이 필요하거나 개인 계정일 수 있습니다</span>`
+        + (url ? `<br><a href="${esc(url)}" target="_blank" rel="noopener" style="display:inline-block;margin-top:8px;color:#1877F2;font-weight:700;text-decoration:none">페이스북에서 열기 ↗</a>` : "")
+        + `</div>`;
+      body.dataset.done = "1";
+    }
+  });
+}
+
+/* ===== 모달 ===== */
+window.openForm = function(id){
+  editingId = id || null;
+  const p = id ? people.find(x=>x.id===id) : null;
+
+  document.getElementById("mTitle").textContent = p ? "인물 편집" : "인물 추가";
+  document.getElementById("delBtn").style.display = p ? "inline-flex" : "none";
+  document.getElementById("fName").value = p ? (p.name||"") : "";
+  const gsel = document.getElementById("fGroup");
+  gsel.innerHTML = groups.map(g=>`<option value="${esc(g)}">${esc(g)}</option>`).join("");
+  gsel.value = p ? groupOf(p) : activeGroup;
+  document.getElementById("fTags").value = p ? (p.tags||[]).join(", ") : "";
+  {
+    const pm = p ? (p.memo||"") : "", pd = p ? (p.desc||"") : "";
+    // 신형: memo가 전체 텍스트(첫 줄=desc). 구형: desc·memo가 따로 → 합쳐서 표시.
+    document.getElementById("fMemo").value = (!pd || pm.includes(pd)) ? pm : (pd + (pm ? "\n" + pm : ""));
+  }
+
+  photoData = p ? (p.photo||"") : "";
+  paintPhoto();
+
+  links = p ? JSON.parse(JSON.stringify(p.links||[])) : [];
+  if(links.length === 0) links.push({ url:"" });
+  paintLinks();
+
+  paintMulti("fOr", orientations, p ? orsOf(p) : ["기타"]);
+  paintSingle("fTier", ["1","2","3"], p && p.tier!=null ? String(p.tier) : "2");
+
+  document.getElementById("mask").classList.add("on");
+  setTimeout(()=>document.getElementById("fName").focus(), 60);
+};
+window.closeForm = function(){
+  document.getElementById("mask").classList.remove("on");
+  editingId = null; photoData = ""; links = [];
+};
+
+function paintSingle(boxId, values, selected){
+  const box = document.getElementById(boxId);
+  box.innerHTML = ""; box.dataset.val = selected;
+  values.forEach(v=>{
+    const b = document.createElement("div");
+    b.className = "radio" + (v===selected ? " on":"");
+    b.textContent = (boxId==="fTier" ? "T"+v : v);
+    b.onclick = ()=>{
+      box.dataset.val = v;
+      [...box.children].forEach(c=>c.classList.remove("on"));
+      b.classList.add("on");
+    };
+    box.appendChild(b);
+  });
+}
+function paintMulti(boxId, values, selectedArr){
+  const box = document.getElementById(boxId);
+  box.innerHTML = "";
+  const sel = new Set(selectedArr);
+  values.forEach(v=>{
+    const b = document.createElement("div");
+    b.className = "radio" + (sel.has(v) ? " on":"");
+    b.textContent = v;
+    b.dataset.v = v;
+    b.onclick = ()=>{
+      if(sel.has(v)) sel.delete(v); else sel.add(v);
+      if(sel.size === 0) sel.add("기타");   // 최소 하나는 남긴다
+      [...box.children].forEach(c=>c.classList.toggle("on", sel.has(c.dataset.v)));
+    };
+    box.appendChild(b);
+  });
+}
+function readMulti(boxId){
+  const box = document.getElementById(boxId);
+  const out = [...box.children].filter(c=>c.classList.contains("on")).map(c=>c.dataset.v);
+  return out.length ? out : ["기타"];
+}
+
+/* ===== 사진 ===== */
+function paintPhoto(){
+  const d = document.getElementById("drop");
+  d.innerHTML = photoData ? `<img src="${photoData}" alt="">` : "클릭 · 드래그<br>· Ctrl+V";
+}
+window.clearPhoto = function(){ photoData = ""; paintPhoto(); };
+
+function loadImageFile(file){
+  if(!file || !file.type.startsWith("image/")){ toast("이미지 파일이 아닙니다"); return; }
+  const fr = new FileReader();
+  fr.onload = e=>{
+    const img = new Image();
+    img.onload = ()=>{
+      const S = 200;
+      const cv = document.createElement("canvas");
+      cv.width = S; cv.height = S;
+      const ctx = cv.getContext("2d");
+      const side = Math.min(img.width, img.height);
+      ctx.drawImage(img, (img.width-side)/2, (img.height-side)/2, side, side, 0, 0, S, S);
+      photoData = cv.toDataURL("image/jpeg", 0.78);
+      paintPhoto();
+    };
+    img.onerror = ()=> toast("이미지를 읽지 못했습니다");
+    img.src = e.target.result;
+  };
+  fr.readAsDataURL(file);
+}
+
+/* ===== 링크 ===== */
+function paintLinks(){
+  const box = document.getElementById("linkList");
+  box.innerHTML = "";
+  links.forEach((l,i)=>{
+    const d = detectSns(l.url);
+    const row = document.createElement("div");
+    row.className = "linkrow";
+    const dark = (d.color.toUpperCase() === "#FEE500");
+    row.innerHTML = `
+      <span class="k" style="background:${d.color}${dark?';color:#202124':''}">${d.label}</span>
+      <input type="text" value="${esc(l.url||"")}" placeholder="주소 붙여넣기">
+      <span class="del">×</span>`;
+    const inp = row.querySelector("input");
+    inp.oninput = ()=>{ links[i].url = inp.value; };
+    inp.onblur  = ()=>{ links[i].url = normUrl(inp.value); paintLinks(); };
+    row.querySelector(".del").onclick = ()=>{
+      links.splice(i,1);
+      if(links.length===0) links.push({url:""});
+      paintLinks();
+    };
+    box.appendChild(row);
+  });
+}
+window.addLinkRow = function(){ links.push({url:""}); paintLinks(); };
+
+/* ===== 저장 / 삭제 ===== */
+window.savePerson = async function(){
+  const name = document.getElementById("fName").value.trim();
+  if(!name){ toast("이름은 필수입니다"); return; }
+
+  const tags = document.getElementById("fTags").value
+    .split(",").map(s=>s.trim()).filter(Boolean);
+  const cleanLinks = links.map(l => ({ url: normUrl(l.url) })).filter(l => l.url);
+  const ors = readMulti("fOr");
+
+  const memoVal = document.getElementById("fMemo").value.trim();
+  const data = {
+    name,
+    group: document.getElementById("fGroup").value || activeGroup,
+    desc: memoVal.split("\n")[0].trim(),   // 카드 표시용 = 메모 첫 줄
+    orientations: ors,
+    orientation: ors[0],           // 구버전 호환용
+    tier: Number(document.getElementById("fTier").dataset.val || 2),
+    tags, links: cleanLinks,
+    memo: memoVal,
+    photo: photoData || ""
+  };
+
+  try{
+    if(editingId){
+      await setDoc(peopleDoc(editingId), data, { merge:true });
+      toast("수정되었습니다");
+    }else{
+      const id = "p_" + Date.now() + "_" + Math.random().toString(36).slice(2,7);
+      data.createdAt = Date.now();
+      data.interest = false;
+      await setDoc(peopleDoc(id), data);
+      toast("등록되었습니다");
+    }
+    closeForm();
+  }catch(e){
+    console.error(e);
+    toast("저장 실패 — 사진 용량이 크거나 연결에 문제가 있습니다");
+  }
+};
+
+window.removePerson = async function(){
+  if(!editingId) return;
+  const p = people.find(x=>x.id===editingId);
+  if(!confirm(`"${p?p.name:""}" 을(를) 삭제할까요?`)) return;
+  try{
+    await deleteDoc(peopleDoc(editingId));
+    closeForm(); toast("삭제되었습니다");
+  }catch(e){ console.error(e); toast("삭제 실패"); }
+};
+
+/* ===== 이벤트 ===== */
+const drop = document.getElementById("drop");
+const fileInput = document.getElementById("file");
+drop.onclick = ()=> fileInput.click();
+fileInput.onchange = e=>{ loadImageFile(e.target.files[0]); fileInput.value = ""; };
+drop.ondragover = e=>{ e.preventDefault(); drop.classList.add("hover"); };
+drop.ondragleave = ()=> drop.classList.remove("hover");
+drop.ondrop = e=>{ e.preventDefault(); drop.classList.remove("hover"); loadImageFile(e.dataTransfer.files[0]); };
+document.addEventListener("paste", e=>{
+  if(!document.getElementById("mask").classList.contains("on")) return;
+  const items = e.clipboardData && e.clipboardData.items;
+  if(!items) return;
+  for(const it of items){
+    if(it.type.startsWith("image/")){ loadImageFile(it.getAsFile()); e.preventDefault(); break; }
+  }
+});
+document.getElementById("mask").onclick = e=>{ if(e.target.id === "mask") closeForm(); };
+document.addEventListener("keydown", e=>{
+  if(e.key === "Escape" && document.getElementById("mask").classList.contains("on")) closeForm();
+});
+
+document.getElementById("gAddBtn").onclick = addGroup;
+renderGroupTabs();
+boot();
+
+/* ===== 공방(이슈 통합 분석): 뉴스+X+개인 페이스북을 모아 Gemini가 시간순으로 정리 =====
+   이 파일도 빌드 시 해시 파일명 치환 대상이 아니라(scripts/build.mjs 참고) config.js를
+   외부 참조로 못 쓴다 — sns-tool.html과 같은 이유로 필요한 값을 직접 들고 있는다.
+   config.js 값을 바꾸면 여기도 같이 바꿔야 함. */
+const NAVER_PROXY_URL_DB = 'https://naver-news-proxy.YOUR-ACCOUNT.workers.dev/';
+const FB_WORKER_DB = 'https://naver-news-proxy.YOUR-ACCOUNT.workers.dev';
+const X_SEARCH_WORKER_URL_DB = 'https://x-search-worker.YOUR-ACCOUNT.workers.dev/search';
+const GEMINI_API_KEY_DB = '';
+const GEMINI_MODEL_DB = 'gemini-3.5-flash-lite';
+
+let dbState = null;
+function resetDbState(){ dbState = { status: 'form' }; }
+
+// 국회의원 명단(x/fb 포함)은 sns-tool.html(legacyFrame) 안에만 있다 — 300명 고정
+// 배열을 이 파일에 또 두지 않고, 같은 오리진인 그 iframe의 D.members를 그대로 읽는다.
+async function getLegacyRoster(){
+  const f = document.getElementById('legacyFrame');
+  if(!f) return [];
+  for(let i=0;i<40;i++){
+    try{
+      const w = f.contentWindow;
+      if(w && typeof w.getRosterState === 'function'){
+        const st = w.getRosterState();
+        if(Array.isArray(st.members) && st.members.length>0 && st.fsLoaded) return st.members;
+      }
+    }catch(e){}
+    await new Promise(r=>setTimeout(r,250));
+  }
+  try{ return f.contentWindow.getRosterState().members || []; }catch(e){ return []; }
+}
+
+function decodeNaverTextDb(s){
+  return String(s||'').replace(/<[^>]+>/g,'').replace(/&quot;/g,'"').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&#39;/g,"'");
+}
+
+async function fetchNewsDb(topic){
+  try{
+    const url = NAVER_PROXY_URL_DB + '?query=' + encodeURIComponent(topic) + '&display=15&sort=date';
+    const res = await fetch(url);
+    const data = await res.json();
+    if(!data.items) return [];
+    return data.items.map(item => ({
+      title: decodeNaverTextDb(item.title),
+      link: item.originallink || item.link,
+      pubDate: item.pubDate,
+      excerpt: decodeNaverTextDb(item.description).slice(0,300)
+    }));
+  }catch(e){ console.error('[공방] 뉴스 검색 실패', e); return []; }
+}
+
+async function fetchXDb(topic, days, members){
+  const targets = members.filter(m=>(m.x||'').trim()!=='').map(m=>({name:m.nm, x:m.x, factions:m.fac||[]}));
+  if(!targets.length) return { posts:[], error:null };
+  // Worker는 요청당 25명까지만 처리해서(하위요청 상한) 전원을 한 번에 못 보낸다 —
+  // 여러 청크로 나눠 부르고 청크 경계 넘는 멘션까지 다시 계산해주는 헬퍼를
+  // sns-tool.html(legacyFrame)에 이미 만들어뒀으니 그대로 가져다 쓴다.
+  try{
+    const w = document.getElementById('legacyFrame').contentWindow;
+    if(typeof w.searchXChunked !== 'function') return { posts:[], error:'국회의원 탭이 아직 로드되지 않았습니다' };
+    const data = await w.searchXChunked(targets, topic, days);
+    if(data._chunkErrors && data._chunkErrors.length && data.posts.length===0){
+      return { posts:[], error: data._chunkErrors[0] };
+    }
+    const nameByHandle = {};
+    targets.forEach(t => { let h=(t.x||'').trim(); if(h.startsWith('http')) h=h.replace(/\/+$/,'').split('/').pop().replace(/^@/,''); if(h) nameByHandle[h.toLowerCase()] = t.name; });
+    const failed = (data.failed_accounts||[]).map(f => ({ name: nameByHandle[f.handle] || f.handle, error: f.error||'' }));
+    return { posts: data.posts||[], error:null, failed };
+  }catch(e){ return { posts:[], error: e.message, failed: [] }; }
+}
+
+async function fetchFbDb(topic, days, members){
+  // isEmbeddableFb(점이 없으면 "페이지")는 원래 Page Plugin 임베드가 뜰지 판단하려고 만든
+  // 휴리스틱이라 여기 쓰면 안 된다 — 이재명(jaemyung1000)처럼 점 없는 개인 계정이 전부
+  // "페이지"로 오분류돼 검색 대상에서 빠지는 버그가 있었음. fb가 등록된 사람은 전원
+  // 시도하고, 실제 페이지라 안 맞으면 /fbposts가 빈 결과를 주는 걸로 자연히 걸러진다.
+  let vanityFn = (u)=>u;
+  try{
+    const w = document.getElementById('legacyFrame').contentWindow;
+    if(w.fbVanity) vanityFn = w.fbVanity;
+  }catch(e){}
+  // fb 칸에 나무위키 주소 등이 잘못 들어간 경우가 있어 facebook.com 주소만 쓴다.
+  // FB는 1티어 의원만 본다(2026-09-24 사장님 결정). 예전엔 티어순 상위 60명 제한이라
+  // 1티어(FB 등록 97명) 중 37명이 빠지고 있었음. 로그인 페이지를 한꺼번에 많이 열면
+  // 모니터링 계정이 제한될 수 있어 동시에 FB_CONCURRENCY개씩만 조회
+  // (Worker가 성공 응답을 30분 캐시하므로 같은 날 반복 분석은 FB에 다시 안 간다).
+  const FB_CONCURRENCY = 6;
+  const targets = members
+    .filter(m => String(m.tier) === '1' && /facebook\.com/i.test(m.fb||''));
+  if(!targets.length) return { posts:[], needsCookie:false };
+  const topicLower = topic.toLowerCase();
+  const cutoff = new Date(Date.now() - days*86400000).toISOString().slice(0,10);
+  let needsCookie = false;
+  const posts = [];
+  let cursor = 0;
+  const worker = async () => {
+    while(cursor < targets.length){
+      const m = targets[cursor++];
+      try{
+        const v = vanityFn(m.fb);
+        if(!v) continue;
+        const res = await fetch(FB_WORKER_DB + '/fbposts?u=' + encodeURIComponent(v));
+        const data = await res.json();
+        if(data.needsCookie){ needsCookie = true; continue; }
+        (data.posts||[])
+          .filter(p => (p.text||'').toLowerCase().includes(topicLower))
+          .filter(p => !p.date || p.date >= cutoff)
+          .forEach(p => posts.push({ name:m.nm, factions:m.fac||[], text:p.text, date:p.date||null, url:p.url||m.fb }));
+      }catch(e){}
+    }
+  };
+  await Promise.all(Array.from({length: FB_CONCURRENCY}, worker));
+  return { posts, needsCookie };
+}
+
+function buildDbPrompt(topic, days, news, xPosts, fbPosts){
+  let lines = [];
+  lines.push('=== 뉴스 기사 ('+news.length+'건) ===');
+  news.forEach(n => lines.push('- ['+(n.pubDate||'')+'] '+n.title+' — '+n.excerpt+' (출처: '+(n.link||'')+')'));
+  lines.push('\n=== X(트위터) 게시글 ('+xPosts.length+'건) ===');
+  xPosts.forEach(p => {
+    const who = p.name + (p.factions&&p.factions.length ? ' ('+p.factions.join(',')+')' : '')
+      + (p.directed_at&&p.directed_at.length ? ' → '+p.directed_at.join(', ')+' 향' : '');
+    lines.push('- ['+(p.date||'')+'] '+who+': '+(p.text||'').replace(/\s+/g,' ')+' ('+(p.url||'')+')');
+  });
+  lines.push('\n=== 페이스북 게시글 ('+fbPosts.length+'건) ===');
+  fbPosts.forEach(p => {
+    const who = p.name + (p.factions&&p.factions.length ? ' ('+p.factions.join(',')+')' : '');
+    lines.push('- ['+(p.date||'날짜 미상')+'] '+who+': '+(p.text||'').replace(/\s+/g,' ')+' ('+(p.url||'')+')');
+  });
+  return '당신은 정치 뉴스 기사를 쓰는 기자를 돕는 어시스턴트입니다. "'+topic+'" 이슈에 대해 최근 '+days+'일간 나온 뉴스 기사와 국회의원들의 X·페이스북 게시글을 모았습니다. 플랫폼을 넘나드는 전체 흐름을 하나로 정리해주세요.\n\n'
+    + '정확히 아래 3개 소제목("### "로 시작하는 줄)과 그 순서를 그대로 써서 답변하세요. 소제목 아래에는 지시문을 베끼지 말고 실제 분석 내용을 채워 넣으세요.\n\n'
+    + '### 이슈 배경\n이 논쟁이 무엇에 대한 것인지 2~3문장으로 설명하세요.\n\n'
+    + '### 시간순 전개\n뉴스·X·페이스북을 가리지 않고 시간 순서대로 누가 무엇을 발언/보도했고 그게 어떤 반응·반박으로 이어졌는지 인과관계를 짚어가며 서술하세요. 실제 발언은 큰따옴표로 원문 그대로(의역·수정 없이) 인용하고, 플랫폼은 괄호로 표시하세요. 예: (X), (페이스북), (보도).\n\n'
+    + '### 계파/정당별 입장 정리\n각 계파·정당이 어떤 입장을 취하는지 정리하세요.\n\n'
+    + '=== 아래는 수집된 원본 자료입니다 ===\n'
+    + lines.join('\n');
+}
+
+async function runDbAnalysis(topic, days){
+  dbState = { status:'loading', topic, days, stage:'roster' };
+  renderDb();
+  const members = await getLegacyRoster();
+  dbState.stage = 'fetch';
+  renderDb();
+  const [news, xResult, fbResult] = await Promise.all([
+    fetchNewsDb(topic),
+    fetchXDb(topic, days, members),
+    fetchFbDb(topic, days, members)
+  ]);
+  dbState.stage = 'ai';
+  renderDb();
+  const prompt = buildDbPrompt(topic, days, news, xResult.posts, fbResult.posts);
+  try{
+    const res = await fetch('https://generativelanguage.googleapis.com/v1beta/models/'+GEMINI_MODEL_DB+':generateContent?key='+GEMINI_API_KEY_DB, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ contents:[{ parts:[{ text: prompt }] }] })
+    });
+    const data = await res.json();
+    if(!res.ok) throw new Error((data && data.error && data.error.message) || ('HTTP '+res.status));
+    const cand = data && data.candidates && data.candidates[0];
+    const text = (cand && cand.content && cand.content.parts && cand.content.parts[0] && cand.content.parts[0].text || '').trim();
+    if(!text) throw new Error('응답이 비었습니다');
+    dbState = { status:'done', topic, days, narrative:text, news, xPosts:xResult.posts, fbPosts:fbResult.posts, xError:xResult.error, xFailed:xResult.failed||[], fbNeedsCookie:fbResult.needsCookie };
+  }catch(e){
+    console.error('[공방] Gemini 실패', e);
+    dbState = { status:'error', error: e.message };
+  }
+  renderDb();
+}
+
+// Gemini 서술문 안의 큰따옴표 인용을 원본 게시글/기사와 대조해서 그 URL로 링크한다.
+// 공백·개행 차이는 무시하고 비교(정규화)한다 — Gemini가 원문을 그대로 베끼되
+// 줄바꿈 위치 등만 살짝 달라지는 경우가 있어서.
+function normalizeForQuoteMatch(s){ return String(s||'').replace(/[\s"'“”‘’「」『』<>《》〈〉.,·…!?~\-–—()\[\]]/g,''); }
+function bigrams(s){ const out=new Set(); for(let i=0;i<s.length-1;i++) out.add(s.slice(i,i+2)); return out; }
+// 큰따옴표(" " 와 “ ”) 인용은 전부 링크한다. 1) 원문에 글자 그대로 있으면 그 원문,
+// 2) 없으면(Gemini가 살짝 다듬은 경우) 두 글자 조각이 가장 많이 겹치는 원문,
+// 3) 그래도 애매하면 인용 바로 앞에 이름이 나온 의원의 원문으로 연결한다.
+function findQuoteSource(quote, before, normPool){
+  const qNorm = normalizeForQuoteMatch(quote);
+  if(!qNorm) return null;
+  const exact = normPool.find(s => s.norm.includes(qNorm));
+  if(exact) return exact;
+  const qb = bigrams(qNorm);
+  let best = null, bestScore = 0;
+  if(qb.size){
+    normPool.forEach(s => {
+      let hit = 0; qb.forEach(b => { if(s.norm.includes(b)) hit++; });
+      let score = hit / qb.size;
+      if(s.name && before.includes(s.name)) score += 0.15;
+      if(score > bestScore){ bestScore = score; best = s; }
+    });
+  }
+  if(best && bestScore >= 0.5) return best;
+  // 인용 직전에 가장 가까이 등장한 의원 이름의 원문
+  let near = null, nearPos = -1;
+  normPool.forEach(s => { if(!s.name) return; const i = before.lastIndexOf(s.name); if(i > nearPos){ nearPos = i; near = s; } });
+  return near || (bestScore >= 0.3 ? best : null);
+}
+function linkifyQuotesInChunk(text, normPool){
+  const quoteRe = /"([^"\n]{1,300})"|“([^”\n]{1,300})”/g;
+  let out = '';
+  let lastIndex = 0;
+  let m;
+  while((m = quoteRe.exec(text))){
+    out += esc(text.slice(lastIndex, m.index));
+    const quote = m[1] != null ? m[1] : m[2];
+    const open = m[1] != null ? '"' : '“', close = m[1] != null ? '"' : '”';
+    const before = text.slice(Math.max(0, m.index - 80), m.index);
+    const match = findQuoteSource(quote, before, normPool);
+    if(match && match.url){
+      out += '<a class="dbQuote" href="'+esc(match.url)+'" target="_blank" rel="noopener">'+open+esc(quote)+close+'</a>';
+    }else{
+      out += open+esc(quote)+close;
+    }
+    lastIndex = m.index + m[0].length;
+  }
+  out += esc(text.slice(lastIndex));
+  return out;
+}
+// narrative를 "### 소제목" 기준으로 나눠 소제목은 볼드로, 본문은 인용 링크 처리해서
+// 하나의 HTML로 합친다. 화면 표시와 뉴스 스크랩 저장 양쪽에서 같이 쓴다.
+function buildNarrativeHtml(narrative, news, xPosts, fbPosts, forReport){
+  const pool = [];
+  (news||[]).forEach(n => pool.push({ text: (n.title||'')+' '+(n.excerpt||''), url: n.link, name: '' }));
+  (xPosts||[]).forEach(p => pool.push({ text: p.text||'', url: p.url, name: p.name||'' }));
+  (fbPosts||[]).forEach(p => pool.push({ text: p.text||'', url: p.url, name: p.name||'' }));
+  const normPool = pool.map(s => ({ norm: normalizeForQuoteMatch(s.text), url: s.url, name: s.name })).filter(s => s.norm.length>0);
+
+  const lines = String(narrative||'').split('\n');
+  let html = '';
+  let bodyBuf = [];
+  const flush = () => {
+    if(bodyBuf.length){
+      const inner = linkifyQuotesInChunk(bodyBuf.join('\n').trim(), normPool);
+      html += forReport
+        ? inner.split('\n').filter(l => l.trim()).map(l => '<p>'+l+'</p>').join('')
+        : '<div class="dbParagraph">'+inner+'</div>';
+      bodyBuf = [];
+    }
+  };
+  lines.forEach(line => {
+    const hm = line.match(/^#{1,4}\s*(.+?)\s*$/);
+    if(hm){
+      flush();
+      html += forReport ? '<h3>'+esc(hm[1])+'</h3>' : '<div class="dbHeading">'+esc(hm[1])+'</div>';
+    }else if(line.trim()===''){
+      flush();
+    }else{
+      bodyBuf.push(line);
+    }
+  });
+  flush();
+  return html;
+}
+
+// 메인 앱(index.html/app.js)이 people.html을 iframe으로 물고 있을 때만 동작 —
+// 스크랩 저장은 그쪽의 로그인 세션·Firebase Auth·저장 함수를 그대로 빌려 쓴다.
+async function saveDbAsScrap(btn){
+  const parentWin = window.parent;
+  if(!parentWin || parentWin === window || typeof parentWin.saveSavedNewsItem !== 'function'){
+    document.getElementById('dbScrapMsg').textContent = '메인 화면 안에서 열어야 스크랩에 저장할 수 있어요.';
+    return;
+  }
+  btn.disabled = true; btn.textContent = '저장 중…';
+  try{
+    const key = 'm_' + Date.now().toString(36) + Math.random().toString(36).slice(2,6);
+    const noteHtml = buildNarrativeHtml(dbState.narrative, dbState.news, dbState.xPosts, dbState.fbPosts);
+    const item = {
+      type: 'manual',
+      title: '[떠든 사람들] ' + dbState.topic,
+      link: '',
+      source: '공방 분석',
+      bodyIsFinal: true,   // 이미 정리된 내용이라 Gemini 자동요약으로 다시 덮어쓰지 않음
+      note: noteHtml,
+      pubDate: new Date().toISOString(),
+      tags: [],
+      order: parentWin.nextSavedOrder ? parentWin.nextSavedOrder() : Date.now(),
+      addedAt: Date.now()
+    };
+    const ok = await parentWin.saveSavedNewsItem(key, item);
+    if(ok){
+      document.getElementById('dbScrapMsg').textContent = '✓ 스크랩에 저장됐습니다';
+      if(typeof parentWin.renderSavedNews === 'function') parentWin.renderSavedNews();
+      btn.textContent = '✓ 스크랩됨';
+    }else{
+      document.getElementById('dbScrapMsg').textContent = '저장 실패 — 새로고침 후 다시 시도해주세요';
+      btn.disabled = false; btn.textContent = '📌 뉴스 스크랩으로 저장';
+    }
+  }catch(e){
+    console.error('[공방 스크랩 저장 실패]', e);
+    document.getElementById('dbScrapMsg').textContent = '저장 실패: ' + e.message;
+    btn.disabled = false; btn.textContent = '📌 뉴스 스크랩으로 저장';
+  }
+}
+
+/* ===== 떠든 히스토리 — 뉴스 리포트와 같은 방식(목록 펼침 → 편집 → 인쇄·Word·삭제·저장).
+   개인 데이터 /users/{uid}/debate_reports/{id}. 저장·인쇄·Word는 메인 앱(index.html)의
+   로그인 세션과 함수(dbFetch·userPath·printReportDoc·exportReportDocWord)를 빌려 쓴다. */
+let dhReports = {};
+let dhOpenId = null;
+let dhAutosave = null;
+let dhLoaded = false;
+
+function dhParent(){
+  const p = window.parent;
+  if(!p || p === window || typeof p.dbFetch !== 'function' || typeof p.userPath !== 'function') return null;
+  return p;
+}
+function dhTitleAt(ts){
+  const d = new Date(ts), z = n => String(n).padStart(2,'0');
+  return d.getFullYear()+'-'+z(d.getMonth()+1)+'-'+z(d.getDate())+' '+z(d.getHours())+':'+z(d.getMinutes());
+}
+async function loadDebateReports(){
+  const p = dhParent();
+  if(!p){ dhReports = {}; return false; }
+  try{
+    const data = await p.dbFetch(p.userPath('debate_reports')).then(r => r.json());
+    dhReports = (data && typeof data === 'object' && !Array.isArray(data)) ? data : {};
+    dhLoaded = true;
+    return true;
+  }catch(e){ console.warn('[떠든 히스토리 불러오기 실패]', e); return false; }
+}
+async function saveDebateReport(rep){
+  const p = dhParent();
+  if(!p) return false;
+  rep.updatedAt = Date.now();
+  dhReports[rep.id] = rep;
+  try{
+    const res = await p.dbFetch(p.userPath('debate_reports/' + rep.id), {
+      method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify(rep)
+    });
+    return res.ok;
+  }catch(e){ console.warn('[떠든 히스토리 저장 실패]', e); return false; }
+}
+async function deleteDebateReport(id){
+  const p = dhParent();
+  delete dhReports[id];
+  if(dhOpenId === id) dhOpenId = null;
+  if(p){ try{ await p.dbFetch(p.userPath('debate_reports/' + id), { method:'DELETE' }); }catch(e){} }
+}
+
+// 분석 결과 → 리포트 본문(뉴스 리포트와 같은 h3/p 구조, 인용 링크 유지, 끝에 출처 목록)
+function buildDbReportHtml(){
+  let html = buildNarrativeHtml(dbState.narrative, dbState.news, dbState.xPosts, dbState.fbPosts, true);
+  const group = (label, items, line) => items.length
+    ? '<h4>'+label+' ('+items.length+')</h4>' + items.map(line).join('') : '';
+  const src = group('뉴스', dbState.news, n => '<p>'+esc(n.pubDate ? n.pubDate.slice(5,16) : '')+' · <a href="'+esc(n.link)+'">'+esc(n.title)+'</a></p>')
+    + group('X', dbState.xPosts, x => '<p>'+esc(x.date||'')+' · '+esc(x.name)+' · <a href="'+esc(x.url)+'">'+esc((x.text||'').replace(/\s+/g,' ').slice(0,60))+'</a></p>')
+    + group('페이스북', dbState.fbPosts, f => '<p>'+esc(f.date||'')+' · '+esc(f.name)+' · <a href="'+esc(f.url)+'">'+esc((f.text||'').replace(/\s+/g,' ').slice(0,60))+'</a></p>');
+  if(src) html += '<hr><h3>출처</h3>' + src;
+  return html + '<p><br></p>';
+}
+async function saveDbToHistory(btn){
+  const msg = document.getElementById('dbScrapMsg');
+  if(!dhParent()){ msg.textContent = '메인 화면 안에서 열어야 히스토리에 저장할 수 있어요.'; return; }
+  btn.disabled = true; btn.textContent = '저장 중…';
+  if(!dhLoaded) await loadDebateReports();
+  const ts = Date.now();
+  const rep = {
+    id: 'd_' + ts,
+    title: '[떠든 사람들] ' + dbState.topic + ' · ' + dhTitleAt(ts),
+    topic: dbState.topic, days: dbState.days,
+    bodyHtml: buildDbReportHtml(),
+    createdAt: ts, updatedAt: ts
+  };
+  if(await saveDebateReport(rep)){
+    btn.textContent = '✓ 히스토리에 저장됨';
+    dhOpenId = rep.id;
+    showDbSub('hist');
+  }else{
+    btn.disabled = false; btn.textContent = '📚 떠든 히스토리에 저장';
+    msg.textContent = '저장 실패 — 새로고침 후 다시 시도해주세요';
+  }
+}
+
+function showDbSub(which){
+  const hist = (which === 'hist');
+  document.getElementById('dbSubFind').classList.toggle('on', !hist);
+  document.getElementById('dbSubHist').classList.toggle('on', hist);
+  document.getElementById('dbFindView').hidden = hist;
+  document.getElementById('dbHistView').hidden = !hist;
+  if(hist) openDebateHistory();
+  else flushDhEditor();
+}
+async function openDebateHistory(){
+  const root = document.getElementById('dbHistList');
+  if(!dhParent()){ root.innerHTML = '<div class="dhEmpty">메인 화면(정글) 안에서 열어야 히스토리를 볼 수 있어요.</div>'; return; }
+  if(!dhLoaded){
+    root.innerHTML = '<div class="dhEmpty">불러오는 중…</div>';
+    if(!(await loadDebateReports())){ root.innerHTML = '<div class="dhEmpty">히스토리를 불러오지 못했어요. 새로고침 후 다시 시도해주세요.</div>'; return; }
+  }
+  renderDebateHistory();
+}
+function dhPreview(html){
+  const d = document.createElement('div'); d.innerHTML = String(html || '').replace(/<\/(h3|h4|p|div)>/gi, ' </$1>');
+  return (d.textContent || '').replace(/\s+/g,' ').trim().slice(0, 120);
+}
+function renderDebateHistory(){
+  const root = document.getElementById('dbHistList');
+  if(dhAutosave){ clearTimeout(dhAutosave); dhAutosave = null; }
+  const list = Object.values(dhReports).sort((a,b) => (b.createdAt||0) - (a.createdAt||0));
+  if(!list.length){
+    root.innerHTML = '<div class="dhEmpty">저장된 히스토리가 없어요. "떠든이 찾기"에서 분석한 뒤 "📚 떠든 히스토리에 저장"을 눌러보세요.</div>';
+    return;
+  }
+  root.innerHTML = list.map(r => {
+    const open = r.id === dhOpenId;
+    return '<div class="dh-row'+(open?' open':'')+'" data-id="'+esc(r.id)+'">'
+      + '<button class="dh-head" data-dh-toggle="'+esc(r.id)+'"><span class="dh-name">'+esc(r.title)+'</span>'
+      + (open ? '<span class="dh-prev"></span>' : '<span class="dh-prev">'+esc(dhPreview(r.bodyHtml) || '(내용 없음)')+'</span>')
+      + '<span class="dh-caret">'+(open?'▲ 접기':'▼ 펼치기')+'</span></button>'
+      + (open ? dhEditorHtml(r) : '')
+      + '</div>';
+  }).join('');
+  root.querySelectorAll('[data-dh-toggle]').forEach(b => b.onclick = async () => {
+    const id = b.dataset.dhToggle;
+    await flushDhEditor();
+    dhOpenId = (dhOpenId === id) ? null : id;
+    renderDebateHistory();
+  });
+  const openRow = root.querySelector('.dh-row.open');
+  if(openRow) wireDhEditor(openRow, dhOpenId);
+}
+function dhEditorHtml(rep){
+  return '<div class="dh-editor">'
+    + '<input type="text" class="dh-title" value="'+esc(rep.title)+'" aria-label="문서 제목">'
+    + '<div class="dh-toolbar">'
+    +   '<button class="dh-tb" data-cmd="block" data-val="h3">제목</button>'
+    +   '<button class="dh-tb" data-cmd="block" data-val="h4">소제목</button>'
+    +   '<button class="dh-tb" data-cmd="block" data-val="p">본문</button>'
+    +   '<span class="dh-sep"></span>'
+    +   '<button class="dh-tb" data-cmd="bold"><b>B</b></button>'
+    +   '<button class="dh-tb" data-cmd="italic"><i>I</i></button>'
+    +   '<button class="dh-tb" data-cmd="underline"><u>U</u></button>'
+    +   '<span class="dh-sep"></span>'
+    +   '<button class="dh-tb" data-cmd="hl" data-color="#fff59d" title="노랑 형광펜" style="background:#fff59d">&nbsp;</button>'
+    +   '<button class="dh-tb" data-cmd="hl" data-color="#b9f6ca" title="초록 형광펜" style="background:#b9f6ca">&nbsp;</button>'
+    +   '<button class="dh-tb" data-cmd="hl" data-color="#ffcdd2" title="분홍 형광펜" style="background:#ffcdd2">&nbsp;</button>'
+    +   '<button class="dh-tb" data-cmd="hl" data-color="transparent" title="형광펜 지우기">지우기</button>'
+    +   '<span class="dh-sep"></span>'
+    +   '<button class="dh-tb" data-cmd="hr">— 가로줄</button>'
+    + '</div>'
+    + '<div class="dh-body" contenteditable="true" spellcheck="false">'+(rep.bodyHtml||'')+'</div>'
+    + '<div class="dh-foot">'
+    +   '<span class="dh-state"></span><span class="dh-spacer"></span>'
+    +   '<button class="btn" data-dh-foot="print">🖨 인쇄</button>'
+    +   '<button class="btn" data-dh-foot="word">Word</button>'
+    +   '<button class="btn dh-del" data-dh-foot="delete">삭제</button>'
+    +   '<button class="btn primary" data-dh-foot="save">저장</button>'
+    + '</div></div>';
+}
+async function flushDhEditor(){
+  if(dhAutosave){ clearTimeout(dhAutosave); dhAutosave = null; }
+  const row = document.querySelector('.dh-row.open');
+  if(!row) return;
+  const r = dhReports[row.dataset.id];
+  const body = row.querySelector('.dh-body');
+  if(!r || !body) return;
+  const t = (row.querySelector('.dh-title').value || '').trim() || dhTitleAt(r.createdAt);
+  if(r.title !== t || r.bodyHtml !== body.innerHTML){ r.title = t; r.bodyHtml = body.innerHTML; await saveDebateReport(r); }
+}
+function wireDhEditor(row, id){
+  const rep = dhReports[id];
+  if(!rep) return;
+  const titleEl = row.querySelector('.dh-title');
+  const body = row.querySelector('.dh-body');
+  const stateEl = row.querySelector('.dh-state');
+  const markSaved = (ok) => {
+    if(ok === false){ stateEl.textContent = '저장 실패 — 새로고침 후 다시'; stateEl.classList.add('bad'); return; }
+    const d = new Date(), z = n => String(n).padStart(2,'0');
+    stateEl.textContent = '임시저장됨 '+z(d.getHours())+':'+z(d.getMinutes());
+    stateEl.classList.remove('bad');
+  };
+  const persist = async () => {
+    const r = dhReports[id]; if(!r) return;
+    r.title = (titleEl.value || '').trim() || dhTitleAt(r.createdAt);
+    r.bodyHtml = body.innerHTML;
+    markSaved(await saveDebateReport(r));
+    const nameEl = row.querySelector('.dh-name'); if(nameEl) nameEl.textContent = r.title;
+  };
+  const scheduleSave = () => { if(dhAutosave) clearTimeout(dhAutosave); dhAutosave = setTimeout(persist, 2000); };
+  titleEl.addEventListener('input', scheduleSave);
+  body.addEventListener('input', scheduleSave);
+  body.addEventListener('blur', persist);
+  body.addEventListener('paste', (e) => {
+    e.preventDefault();
+    const text = (e.clipboardData || window.clipboardData).getData('text/plain');
+    if(text){ document.execCommand('insertText', false, text); scheduleSave(); }
+  });
+  row.querySelectorAll('.dh-tb').forEach(btn => {
+    btn.onmousedown = (e) => e.preventDefault();
+    btn.onclick = () => {
+      const cmd = btn.dataset.cmd;
+      body.focus();
+      if(cmd === 'bold' || cmd === 'italic' || cmd === 'underline') document.execCommand(cmd);
+      else if(cmd === 'block') document.execCommand('formatBlock', false, btn.dataset.val);
+      else if(cmd === 'hr') document.execCommand('insertHorizontalRule');
+      else if(cmd === 'hl'){ document.execCommand('styleWithCSS', false, true); document.execCommand('hiliteColor', false, btn.dataset.color); }
+      scheduleSave();
+    };
+  });
+  row.querySelectorAll('[data-dh-foot]').forEach(btn => {
+    btn.onclick = async () => {
+      const act = btn.dataset.dhFoot;
+      const p = dhParent();
+      if(act === 'save'){ await persist(); }
+      else if(act === 'print'){ await persist(); if(p && p.printReportDoc) p.printReportDoc(dhReports[id].title, dhReports[id].bodyHtml); }
+      else if(act === 'word'){ await persist(); if(p && p.exportReportDocWord) p.exportReportDocWord(dhReports[id].title, dhReports[id].bodyHtml); }
+      else if(act === 'delete'){
+        if(!confirm("'"+rep.title+"' 히스토리를 삭제할까요?")) return;
+        await deleteDebateReport(id); renderDebateHistory();
+      }
+    };
+  });
+}
+
+function renderDb(){
+  const body = document.getElementById('dbBody');
+  if(!dbState) resetDbState();
+  const topicInput = document.getElementById('dbTopicInput');
+  const daysInput = document.getElementById('dbDaysInput');
+  const askBtn = document.getElementById('dbAskBtn');
+  const loading = (dbState.status === 'loading');
+  topicInput.disabled = loading; daysInput.disabled = loading; askBtn.disabled = loading;
+  askBtn.textContent = loading ? '분석 중…' : '분석';
+
+  if(dbState.status === 'form'){
+    body.innerHTML = '<div class="dbEmpty">이슈나 키워드를 입력하고 "분석"을 눌러주세요.<br><span style="font-size:11.5px">등록된 의원 전원의 X·개인 페이스북 + 관련 뉴스를 모두 훑습니다.</span></div>';
+  }else if(dbState.status === 'loading'){
+    const stages = [['roster','의원 명단 확인'],['fetch','뉴스·X·페이스북 수집'],['ai','Gemini 정리']];
+    const order = ['roster','fetch','ai'];
+    const curIdx = order.indexOf(dbState.stage);
+    body.innerHTML = '<div class="dbEmpty"><div class="dbSpinner"></div>"'+esc(dbState.topic)+'" 분석 중…'
+      + '<div class="dbStageList">' + stages.map(([k,label],i)=>{
+          const cls = i<curIdx ? 'done' : (i===curIdx ? 'on' : '');
+          const mark = i<curIdx ? '✓ ' : (i===curIdx ? '· ' : '　');
+          return '<div class="'+cls+'">'+mark+esc(label)+'</div>';
+        }).join('') + '</div></div>';
+  }else if(dbState.status === 'done'){
+    let html = '';
+    if(dbState.xFailed && dbState.xFailed.length){
+      const rate = dbState.xFailed.some(f => /429|rate limit/i.test(f.error));
+      html += '<div class="dbWarn">X 조회 실패 '+dbState.xFailed.length+'명'
+        + (rate ? ' (X 요청 한도 초과)' : '')
+        + ': '+esc(dbState.xFailed.map(f=>f.name).join(', '))
+        + ' — 이 의원들의 X 발언은 정리에서 빠졌습니다. 몇 분 뒤 다시 분석하면 채워질 수 있어요.</div>';
+    }
+    html += '<div class="dbNarrative">'+buildNarrativeHtml(dbState.narrative, dbState.news, dbState.xPosts, dbState.fbPosts)+'</div>'
+      + '<div class="dbScrapRow"><button class="btn primary" id="dbHistSaveBtn">📚 떠든 히스토리에 저장</button><button class="btn" id="dbScrapBtn">📌 뉴스 스크랩으로 저장</button><span id="dbScrapMsg"></span></div>';
+    const totalSrc = dbState.news.length + dbState.xPosts.length + dbState.fbPosts.length;
+    html += '<div class="dbSources"><div class="dbSourcesTitle" id="dbSrcToggle">출처 원문 '+totalSrc+'건 (펼치기)</div><div id="dbSrcBody" style="display:none">';
+    if(dbState.news.length){
+      html += '<div class="dbSourceGroup"><h4>뉴스 ('+dbState.news.length+')</h4>' + dbState.news.map(n =>
+        '<div class="dbSourceItem"><span class="who">'+esc(n.pubDate?n.pubDate.slice(0,16):'')+'</span><a href="'+esc(n.link)+'" target="_blank" rel="noopener">'+esc(n.title)+'</a></div>'
+      ).join('') + '</div>';
+    }
+    if(dbState.xPosts.length){
+      html += '<div class="dbSourceGroup"><h4>X ('+dbState.xPosts.length+')</h4>' + dbState.xPosts.map(p =>
+        '<div class="dbSourceItem"><span class="who">'+esc(p.name)+'</span><a href="'+esc(p.url)+'" target="_blank" rel="noopener">'+esc((p.text||'').slice(0,60))+'</a></div>'
+      ).join('') + '</div>';
+    }
+    if(dbState.fbPosts.length){
+      html += '<div class="dbSourceGroup"><h4>페이스북 ('+dbState.fbPosts.length+')</h4>' + dbState.fbPosts.map(p =>
+        '<div class="dbSourceItem"><span class="who">'+esc(p.name)+'</span><a href="'+esc(p.url)+'" target="_blank" rel="noopener">'+esc((p.text||'').slice(0,60))+'</a></div>'
+      ).join('') + '</div>';
+    }
+    if(dbState.fbNeedsCookie){
+      html += '<div class="dbSourceGroup"><h4>페이스북</h4><div class="dbSourceItem" style="color:var(--faint)">개인 페이스북 연결 안 됨(컴퓨터에서 FB_COOKIE 설정 필요) — 팬페이지·임베드 가능한 계정만 잡힙니다.</div></div>';
+    }
+    if(dbState.xError){
+      html += '<div class="dbSourceGroup"><h4>X</h4><div class="dbSourceItem" style="color:#C5221F">X 검색 실패: '+esc(dbState.xError)+'</div></div>';
+    }
+    html += '</div></div>';
+    body.innerHTML = html;
+    const toggle = document.getElementById('dbSrcToggle');
+    if(toggle) toggle.onclick = () => {
+      const b = document.getElementById('dbSrcBody');
+      const open = b.style.display !== 'none';
+      b.style.display = open ? 'none' : 'block';
+      toggle.textContent = '출처 원문 '+totalSrc+'건 ('+(open?'펼치기':'접기')+')';
+    };
+    const scrapBtn = document.getElementById('dbScrapBtn');
+    if(scrapBtn) scrapBtn.onclick = () => saveDbAsScrap(scrapBtn);
+    const histBtn = document.getElementById('dbHistSaveBtn');
+    if(histBtn) histBtn.onclick = () => saveDbToHistory(histBtn);
+  }else if(dbState.status === 'error'){
+    body.innerHTML = '<div class="dbEmpty">분석 실패: '+esc(dbState.error||'')+'</div>';
+  }
+}
+
+(function(){
+  const topicInput = document.getElementById('dbTopicInput');
+  const daysInput = document.getElementById('dbDaysInput');
+  const askBtn = document.getElementById('dbAskBtn');
+  const errBox = document.getElementById('dbErr');
+  const showErr = (msg) => {
+    errBox.textContent = msg; errBox.style.display = 'block';
+    topicInput.classList.add('errShake');
+    setTimeout(()=>topicInput.classList.remove('errShake'), 400);
+    topicInput.focus();
+  };
+  const submit = () => {
+    const topic = topicInput.value.trim();
+    const days = parseInt(daysInput.value,10) || 7;
+    if(!topic){ showErr('키워드를 먼저 입력해주세요.'); return; }
+    errBox.style.display = 'none';
+    runDbAnalysis(topic, days);
+  };
+  askBtn.onclick = submit;
+  topicInput.onkeydown = (e) => { if(e.key==='Enter'){ e.preventDefault(); submit(); } };
+  topicInput.oninput = () => { if(errBox.style.display!=='none') errBox.style.display='none'; };
+  document.getElementById('dbSubFind').onclick = () => showDbSub('find');
+  document.getElementById('dbSubHist').onclick = () => showDbSub('hist');
+  resetDbState();
+  renderDb();
+})();
+</script>
+<script src="pillnav.js"></script>
+<script src="app-float.js"></script>
+<script src="app-special.js"></script>
+</body>
+</html>
