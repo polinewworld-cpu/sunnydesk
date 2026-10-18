@@ -466,6 +466,7 @@ function nextBroadcastTime(t, now){
   return cand;
 }
 function updateClock(){
+  if(!(JUNGLE_CONFIG.broadcastTimes || []).length) return;   // 써니데스크: 방송 시간이 없으면 카운트다운을 쓰지 않는다
   const now = new Date();
   const targets = JUNGLE_CONFIG.broadcastTimes.map(t=> nextBroadcastTime(t, now));
   let next = targets.sort((a,b)=>a-b)[0];

@@ -64,9 +64,7 @@ const JUNGLE_CONFIG = {
 
   /* ---------- 방송 카운트다운 ----------
      주말(토·일)은 항상 휴방 처리(app.js updateClock). skipWeekdays는 그 외 요일별 추가 휴방(0=일 ~ 6=토). */
-  broadcastTimes: [
-    { hour: 20, minute: 0, label: '저녁 방송', skipWeekdays: [] }   // 예시 — 써니의 실제 방송 시간으로 바꾸세요
-  ],
+  broadcastTimes: [],   // 비어 있으면 방송 카운트다운을 쓰지 않는다. 쓰려면 { hour: 20, minute: 0, label: '저녁 방송', skipWeekdays: [] } 형태로 추가
 
   /* ---------- 유튜브 탭 정의 ---------- */
   youtubeTabs: [

@@ -132,7 +132,7 @@ firebase deploy --only hosting --project YOUR_PROJECT_ID
 2. **설정 → 언론사 → 직접 RSS 등록**: 외신 RSS를 넣으세요.
 3. **뉴스 → 키워드**: 관심 키워드를 등록하세요.
 4. **유튜브 모니터링**: 볼 채널을 추가하세요.
-5. `config.js`의 `broadcastTimes`를 내 방송 시간으로 바꾸세요.
+5. (선택) 방송 시간 카운트다운이 필요하면 `config.js`의 `broadcastTimes`에 방송 시간을 넣으세요. 비어 있으면 카운트다운은 나오지 않습니다.
 
 ## 키와 공개 저장소 (중요)
 

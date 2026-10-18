@@ -58,6 +58,7 @@ HTML에 `data-sunny-hidden` 표시가 붙은 요소들이다. 화면에서만 �
 | SNS '떠든 사람들' 탭 | `people.html #tabDebate` |
 | 설정의 유형·불만·알고리즘 탭 | `app-settings.js` |
 | 스크랩 팀원 보기 | `app-scrap-peer.js`(`config.js scrapPeers`가 빈 배열) |
+| 방송 카운트다운(헤더·사이드바 "다음방송") | `index.html .gb-countdown`·`#sbCountdown`, `app-core.js updateClock`(`config.js broadcastTimes`가 빈 배열) |
 
 ## 아직 안 한 것 (써니와 정해야 한다)
 1. **국내정치 / 외신 탭 분리**: 분야별로 키워드·구독·읽음이 따로 가야 한다. 외신은 직접 등록한 RSS로 묶는다. 지금은 분리돼 있지 않다.
