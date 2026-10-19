@@ -1,7 +1,7 @@
 /* =========================================================================
    신피디 '방송 브리프' (2026-10-15 사장님 지시: 방송 직전 한 장짜리 + 우리 채널 패턴 학습)
    - 우리 채널 최근 60일 영상(공개 조회수·길이·업로드 시각·제목, 유튜브 API 약 12유닛)에서 패턴을 계산해 /recommend/shinpd/pattern 에 저장(20시간마다 갱신)
-   - 방송 브리프 = 다음 방송까지 남은 시간 + 지금 리포트의 이슈 중 후보 3개(타이밍·정권 타격·우리 대박 키워드와의 겹침으로 점수) + 제목 후보
+   - 방송 브리프 = 다음 방송까지 남은 시간 + 지금 리포트의 이슈 중 후보 3개(타이밍·우리 대박 키워드와의 겹침으로 점수) + 제목 후보
    - 근거는 전부 공개 숫자(조회수 등). 클릭률·시청 지속시간은 못 보므로 "왜"는 단정하지 않는다. 제미나이는 안 씀(코드가 계산).
    ========================================================================= */
 const SPB = { TTL: 3 * 3600 * 1000, DAYS: 3 };   // 2026-10-16 사장님: 60일 평균은 의미 없다 → 최근 3일만
@@ -91,7 +91,7 @@ function spbPicks(r, pattern){
   return r.briefs.filter(b=> !b.ours && b.name).map(b=> {
     const toks = new Set(rcKeyTokens([b.name].concat(b.titles || []).concat([b.what || '']).join(' ')));
     const matched = Array.from(toks).filter(w=> hotSet.has(w));
-    const score = spbTimingScore(b.timing) + (b.stance === '타격' ? 2 : 0) + Math.min(matched.length, 3) * 1.5 + Math.min(b.nCh || 0, 3) * 0.5 + Math.min(b.A || 0, 5) * 0.3;
+    const score = spbTimingScore(b.timing) + Math.min(matched.length, 3) * 1.5 + Math.min(b.nCh || 0, 3) * 0.5 + Math.min(b.A || 0, 5) * 0.3;
     return { b, matched, score };
   }).sort((a, c)=> c.score - a.score).slice(0, 3);
 }
