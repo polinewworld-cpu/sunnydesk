@@ -35,7 +35,7 @@ function spIssueHead(){
 function spIssuePaint(status){
   const box = document.getElementById('shinpdChatLog');
   if(!box || !spIssue) return;
-  const pic = '<img class="tg-pic" src="shinpd-face.jpg?v=20261013b" alt="">';
+  const pic = '<span class="tg-pic sp-noface">신</span>';
   const list = spIssueChats[spIssue.id];
   box.innerHTML = list.map(m=> m.role === 'user'
       ? `<div class="tg-row me"><div class="tg-msg me">${esc(m.text).replace(/\n/g, '<br>')}</div><span class="tg-me-av">${spMyInitial()}</span></div>`
@@ -98,8 +98,6 @@ function spIssueContext(s){
   if(b.what) L.push(`[요약] ${b.what}${b.why ? ' ' + b.why : ''}`);
   if(b.quotes && b.quotes.length) L.push('[기사에 인용된 발언]\n' + b.quotes.map(q=> `- “${q.text}” — ${q.who || '발언자 미상'}${q.ctx ? `(${q.ctx})` : ''}`).join('\n'));
   if(b.taken && b.taken.length) L.push('[유튜브에서 이미 쓰인 각] ' + b.taken.join(' / '));
-  const mine = ((typeof shinpdReport !== 'undefined' && shinpdReport && shinpdReport.ourRecent72) || []);
-  L.push(['[우리 채널(정치신세계) 최근 3일 업로드 — 방송 포함]'].concat(mine.length ? mine.map(v=> `- ${spClock(v.p)} ${v.t}`) : ['(목록 없음)']).join(String.fromCharCode(10)));
   const air = ((typeof shinpdReport !== 'undefined' && shinpdReport && shinpdReport.onAir) || []).slice(0, 60);
   if(air.length) L.push('[우리 방송에서 다룬 내용 — 뉴스 리포트 제목·메모와 방송 꼭지 요약]' + String.fromCharCode(10) + air.map(x=> `- (${spClock(x.at)} ${x.src}) ${x.text}`).join(String.fromCharCode(10)));
   if(k.arts.length) L.push('[기사]\n' + k.arts.map((a, n)=> `- [기사${n + 1}] (${a.ts ? spAgo(a.ts) : '시각 미상'}) ${a.t}\n  ${a.text ? a.text : '(본문을 읽지 못함 — 제목만 확인)'}`).join('\n'));
@@ -121,18 +119,18 @@ async function spIssueSend(){
   try{ await spIssueLearn(q, false); }catch(e){}
   const fact = /사실/.test(q) && !/해석/.test(q);   // 트리거 워드 '사실' = 사실관계 핵심 포인트 요약
   const interp = /해석/.test(q);   // 트리거 워드 '해석' = 타 언론·방송의 논평과 해석 정리(2026-10-16)
-  const hist = chat.slice(-9, -1).map(m=> (m.role === 'user' ? '편집장: ' : '신피디: ') + m.text).join('\n');
+  const hist = chat.slice(-9, -1).map(m=> (m.role === 'user' ? '사용자: ' : '신피디: ') + m.text).join('\n');
   const prompt = [
-    (typeof SPP_CARD !== 'undefined' ? SPP_CARD : '너는 정치신세계 방송 PD 신피디다.'),
+    (typeof SPP_CARD !== 'undefined' ? SPP_CARD : '너는 써니사이드의 PD 신피디다.'),
     SP_CHANNEL_ID,
-    '지금은 편집장이 한 이슈에 대해서만 묻는 대화다. 아래 [자료] 안에서만 답한다.',
+    '지금은 사용자가 한 이슈에 대해서만 묻는 대화다. 아래 [자료] 안에서만 답한다.',
     '규칙:',
     '- 자료에 없는 사실·날짜·발언·수치는 절대 지어내지 마라. 자료로 알 수 없으면 "그건 제가 본 자료에는 없습니다"라고 하고, 어떤 자료가 있으면 알 수 있는지 한 줄로 말해라. 일반 상식으로 채워 넣지 마라.',
     '- 사실관계를 물으면 기사에 나온 내용을 근거로 답하고, 기사마다 말이 다르면 다르다고 밝혀라. 근거가 영상 한 곳뿐이면 그 채널 주장이라고 밝혀라.',
     '- 다른 유튜버들이 어떻게 해석·논평했는지 물으면 채널별로 나눠 입장·논거를 요약하고 채널명을 붙여라. 자료에 있는 채널만 말하고, 안 본 채널 입장은 추측하지 마라. 채널 간 관점 차이가 있으면 짚어라.',
-    '- 우리 채널이 이 이슈를 다뤘는지는 [우리 채널 최근 3일 업로드] 제목과 [우리 방송에서 다룬 내용](뉴스 리포트에 담은 기사·메모, 방송 꼭지 요약)으로 판단한다. 편집장이 "우리가 다뤘다"고 하면 거기서 해당 대목을 찾아 말하고, 없으면 거기서 보이는 것까지만 말해라.',
-    '- 네 한계: 방송 영상 속 말 전체를 직접 듣지는 못하고, 위 두 자료에 적힌 만큼만 안다(정글 뉴스 리포트에 안 담고 방송 제목에도 없는 이야기는 모른다). 네 한계·오류 원인을 물으면 이 구조를 그대로 설명하고, 변명·다짐·사과는 하지 마라("죄송합니다", "챙기겠습니다", "확인해보겠습니다", "빈틈이 있었습니다" 금지). 못 하는 걸 하겠다고 약속하지 마라.',
-    '- 위의 "자료 안에서만" 규칙은 이슈의 사실관계·논평·우리 방송 여부를 물을 때만 적용된다. 이슈와 상관없는 가벼운 잡담, 칭찬·놀림, 신피디 본인 이야기, 전공(통계학) 이야기는 자료 얘기 없이 자연스럽게 받아라. 말투는 신상의 말투 규칙을 따르고, 일부러 무뚝뚝한 척하거나 같은 표현을 반복하지 마라.',
+    '- 우리 방송이 이 이슈를 다뤘는지는 [우리 방송에서 다룬 내용](뉴스 리포트에 담은 기사·메모, 방송 꼭지 요약)으로 판단한다. 사용자가 "우리가 다뤘다"고 하면 거기서 해당 대목을 찾아 말하고, 없으면 거기서 보이는 것까지만 말해라.',
+    '- 네 한계: 방송 영상 속 말 전체를 직접 듣지는 못하고, 위 자료에 적힌 만큼만 안다(정글 뉴스 리포트에 안 담고 방송 제목에도 없는 이야기는 모른다). 네 한계·오류 원인을 물으면 이 구조를 그대로 설명하고, 변명·다짐·사과는 하지 마라("죄송합니다", "챙기겠습니다", "확인해보겠습니다", "빈틈이 있었습니다" 금지). 못 하는 걸 하겠다고 약속하지 마라.',
+    '- 위의 "자료 안에서만" 규칙은 이슈의 사실관계·논평·우리 방송 여부를 물을 때만 적용된다. 이슈와 상관없는 가벼운 잡담, 칭찬·놀림, 신피디 본인 이야기는 자료 얘기 없이 자연스럽게 받아라. 말투는 위 역할 카드의 말투 규칙을 따르고, 일부러 무뚝뚝한 척하거나 같은 표현을 반복하지 마라.',
     '- 참고 채널의 조회수·구독자·시속은 말하지 마라. 질문과 상관없는 다른 이슈 이야기는 하지 마라.',
     '- 기사·영상을 근거로 말할 때는 그 문장 끝에 자료의 번호표를 [영상1], [기사2]처럼 그대로 붙여라(여러 개면 [영상1][영상3]). 번호표는 [자료]에 있는 것만 쓴다.',
     interp ? '- 이번 질문은 "해석" 요청이다: 자료에 있는 타 언론(기사)과 유튜브 방송의 논평·해석만 모아 정리해라. 매체·채널별로 한 덩어리씩 "○○: 이 사건을 이렇게 해석(핵심 주장 한두 문장 + 근거로 든 것)"으로 쓰고 각 덩어리 끝에 번호표를 붙여라. 사실 보도와 해석을 구분하고, 마지막에 관점이 갈리는 지점을 한두 줄로 짚어라. 자료에 해석이 없는 채널은 쓰지 마라.' : '',
@@ -140,7 +138,7 @@ async function spIssueSend(){
     '- 짧고 구체적으로, 두세 문단 이내. 인사·되묻기·같은 문구 반복 금지.',
     `\n[자료]\n${spIssueContext(s)}`,
     `\n[이전 대화]\n${hist || '(없음)'}`,
-    `\n편집장: ${q}\n신피디:`
+    `\n사용자: ${q}\n신피디:`
   ].join('\n');
   let res;
   try{ res = await callGeminiParts([{ text: prompt }]); }catch(e){ res = { text: null, error: String(e.message || e) }; }

@@ -122,7 +122,7 @@ snsHtml = safeMinifyInlineScripts(snsHtml);
 writeFileSync(`${DIST}/sns-tool.html`, snsHtml);
 
 // 5) 그대로 복사할 정적 파일
-for (const f of ['404.html', 'favicon.png', 'shinpd-face.jpg']) {
+for (const f of ['404.html', 'favicon.png']) {
   copyFileSync(`${ROOT}/${f}`, `${DIST}/${f}`);
 }
 

@@ -1,5 +1,5 @@
 /* ======================================================================
-   신피디 (2026-10-13) — 정글2 전용. 정치신세계 PD 겸 모니터링 담당 AI 캐릭터.
+   신피디 (2026-10-13) — 써니사이드 PD 겸 모니터링 담당 AI 캐릭터.
    - 리포트: 정글2가 이미 수집한 데이터(추천 묶음·유튜브·SNS·여론·스크랩)를 숫자·시각·링크로만 정리. AI 호출 0, 중요도 판단 없음.
    - 3시간마다 자동(정글2 탭이 열려 있는 동안) + [새로고침] 즉시 생성. 결과는 RTDB /recommend/shinpd/report 한 부를 팀 3명이 같이 봄.
    - 대화: 저장된 리포트 데이터만 근거로 제미나이가 답함(없으면 "없습니다"). 하루 기기별 상한 GEMINI_DAILY_CAP.shinpd.
@@ -12,8 +12,7 @@ const SHINPD = {
   YT_HOURS: 48,                    // 조회수 상위 대상 기간
   TOP_ISSUES: 10,
   INTEREST_MAX: 20,                // 관심인물 SNS 조회 상한(계정 보호)
-  FACE: 'shinpd-face.jpg?v=20261013b',
-  OUR_CHANNEL_HINT: () => String((typeof JUNGLE_CONFIG !== 'undefined' && JUNGLE_CONFIG.siteName) || '정치신세계')
+  OUR_CHANNEL_HINT: () => '써니사이드'   // config.js ourYoutubeHandle이 비어 있을 때 채널 이름 검색에 쓴다
 };
 let shinpdReport = null;           // 화면에 쓰는 마지막 리포트
 let shinpdBusy = false;
@@ -236,7 +235,7 @@ async function spVideoDigest(v){
   const prompt = [
     '이 유튜브 영상(길면 앞부분만 보여 줌)을 보고 JSON으로만 답해.',
     '형식: {"i":"이 영상의 핵심 쟁점·주장 한 문장(70자 이내)","sum":["가장 중요한 내용 3~4개, 각 80자 이내"]}',
-    'sum은 바쁜 편집장이 영상을 안 보고도 알 수 있게 새로운 사실·구체적 주장·핵심 논거·인물 간 충돌을 문장으로 쓴다. 인사말·구독 요청·광고·잡담은 넣지 마라. 영상에 없는 내용·추측은 쓰지 마라.'
+    'sum은 바쁜 사용자가 영상을 안 보고도 알 수 있게 새로운 사실·구체적 주장·핵심 논거·인물 간 충돌을 문장으로 쓴다. 인사말·구독 요청·광고·잡담은 넣지 마라. 영상에 없는 내용·추측은 쓰지 마라.'
   ].join(' ');
   const part = { file_data: { file_uri: 'https://www.youtube.com/watch?v=' + v.id } };
   part.video_metadata = Object.assign({ fps: SP_VD_FPS }, long ? { start_offset: '0s', end_offset: SP_VD_HEAD_SEC + 's' } : {});
@@ -324,10 +323,10 @@ const SP_BRIEF_CHUNK = 8;      // 한 번에 보내는 후보 수
 const SP_BRIEF_SHOW = 8;       // 편지에 보이는 이슈 수
 let spBriefAir = '';   // 제미나이에게 알려 주는 우리 방송·업로드 목록(이슈 브리핑 때마다 채움)
 const SP_BRIEF_VER = 9;     // 프롬프트·형식을 바꾸면 올린다(캐시된 옛 브리핑을 쓰지 않게)
-/* 채널 정체성(2026-10-13 사장님: "정치신세계의 정치편향성 알지? 그렇게 코딩하면 일 2번 한다") — 방송원고 스킬(political-scripts)의 세계관·이슈 정의를 그대로 옮김.
+/* 채널 정체성(2026-10-13) — 방송원고 스킬(political-scripts)의 세계관·이슈 정의를 그대로 옮김.
    신피디가 이슈를 고르고 각을 말할 때 이 시선을 기본값으로 쓴다. 우선순위는 팩트 > 세계관 > 논리. */
 const SP_CHANNEL_ID = [
-  '[채널 정체성 — 정치신세계]',
+  '[채널 정체성 — 써니사이드]',
   '- 반이재명 성향 채널입니다. 모든 이슈를 먼저 "이재명(정부·여당)에게 타격이 되는가"로 가릅니다. 편향성은 강점이니 억지 중립으로 쓰지 마세요.',
   '- 우선순위는 팩트 > 세계관 > 논리입니다. 사실·숫자·발언·직함은 [자료]에 있는 것만 씁니다. 세계관에 따른 해석은 사실처럼 단정하지 말고 "~로 읽힙니다/~일 수 있습니다"로 해석임을 드러내세요.',
   '- 이슈의 정의: 정부·지자체의 추진 동정(발표·착공·부지 확정·성과 홍보)은 이슈가 아닙니다. 차질·이탈·장애·모순·충돌·의혹 신호가 이슈입니다. 민주당 내 갈등·계파싸움은 크게 다룰 소재이고, 여당 쪽 유튜버·스피커도 소재입니다.',
@@ -416,7 +415,7 @@ function spBriefText(c){
 }
 function spBriefPrompt(cands, ourTop){
   return [
-    '당신은 정치 시사 유튜브 "정치신세계"의 PD "신피디"입니다. 편집장은 이슈의 내용을 모르고 기사·영상을 읽을 시간도 없습니다. 아래 이슈 후보마다 [자료]만 읽고, 채널 정체성의 시선으로 맥락을 요약해 주세요.',
+    '당신은 정치 시사 유튜브 "써니사이드"의 PD "신피디"입니다. 사용자는 이슈의 내용을 모르고 기사·영상을 읽을 시간도 없습니다. 아래 이슈 후보마다 [자료]만 읽고, 채널 정체성의 시선으로 맥락을 요약해 주세요.',
     SP_CHANNEL_ID,
     '규칙: [자료]에 없는 사실·직함·배경은 절대 쓰지 마세요(당신이 아는 지식으로 채우지 마세요). 직함은 자료에 적힌 그대로만, 없으면 이름만 씁니다. 자료만으로 어떤 사건인지 알 수 없거나, 정부·지자체의 추진 동정·홍보에 그치면 issue를 false로, stance를 무관으로 하세요 — 정책·비전 발표, 선포식·행사, 대통령 일정, 시설 개방·이전·착공, 성과 홍보가 그렇습니다. 정부 계획·결정을 소개하는 내용뿐이면 같은 이유로 무관이고, 타격은 [자료]에 실제로 나온 비판·반발·차질·의혹·모순을 hit에서 짚을 수 있을 때만 줍니다 — 출연자 소개·프로그램명·채널명·일반적 주제의 영상만 있는 경우도 그렇습니다.',
     '출력은 JSON 한 덩어리만: {"items":[{"id":"자료의 id","issue":true,"stance":"타격(이재명·정부·여당에 불리한 사실·의혹·갈등) | 방어(정권이 비판·의혹에 맞서 내놓은 해명·반박·반격 — 정책 발표·행사·성과 홍보는 방어가 아님) | 무관","axis":"안보|사법|경제|여당갈등|기타","name":"이슈 이름 — 처음 보는 사람도 알아볼 20자 이내의 말","what":"무슨 일인지 2~3문장. 누가 누구에게(무엇에) 무엇을 했고 지금 어떤 상황인지","why":"what에 없는 새 정보 한 문장 — 왜 지금 터졌는지·쟁점·대립 구도(what을 되풀이하지 말 것)","hit":"이 이슈가 이재명 정부·여당에 어떤 타격(또는 방어 프레임)인지 한 문장 — 자료의 사실에 근거해서만. 무관이면 빈 문자열","read":"채널 세계관으로 읽은 해석 한 줄(등장인물의 의도 가설 등). 근거가 약하면 빈 문자열이고, 사실처럼 단정하지 말고 해석임을 드러낼 것","term":"일반 시청자가 모를 만한 용어·낯선 인물·기관이 있을 때만 자료에 근거한 한 줄 설명, 없으면 빈 문자열. 대통령·여야 지도부·유명 정치인의 직함 설명은 쓰지 마라","quotes":[{"n":인용후보 번호,"who":"발언자(자료에 있을 때만)","ctx":"어떤 사안에 대한 말인지 15자 이내"}],"taken":["유튜브 영상 제목들에서 이미 쓰인 각(프레임) 1~3개 — 제목을 베끼지 말고 6~15자 명사구로, 예: 채무 팩트체크, SNS 저격 해명"],"angle":"그 각들과 겹치지 않는, 채널 시선(정권 타격·모순·누적 패턴)으로 잡을 수 있는 비어 있는 각 한 줄(방향만, 없는 사실은 쓰지 않음)","titles":["제목 후보 3개, 각 40자 이내. 본문보다 세게 질러도 되지만 사실을 허위로 단정하지는 말 것"]}]}',
@@ -668,7 +667,7 @@ function spSnsWorthy(p){
   return t.length >= 25;
 }
 /* ---------- 보고 메일 본문 = 이슈 브리핑 (2026-10-13 제로베이스 개편) ----------
-   편집장이 방송 직전에 알고 싶은 건 ① 지금 터진 이슈가 뭔지(무슨 일·왜) ② 지금 들어가도 되나(유튜브 상황) ③ 어떤 각·제목으로 ④ 방송에서 쓸 핵심 발언.
+   사용자가 방송 직전에 알고 싶은 건 ① 지금 터진 이슈가 뭔지(무슨 일·왜) ② 지금 들어가도 되나(유튜브 상황) ③ 어떤 각·제목으로 ④ 방송에서 쓸 핵심 발언.
    이슈마다 제미나이가 자료를 읽고 쓴 요약(briefs)을 코드가 이 틀에 담는다. 쓸 게 없는 칸은 비운다(억지로 채우지 않음). */
 function spDur(ms){
   const m = Math.max(0, Math.round(ms / 60000)), h = Math.floor(m / 60), mm = m % 60;
@@ -694,7 +693,7 @@ function spSnsWarn(r){
 function spBriefYt(b, r){
   const total = r.totalCh ? `등록 채널 ${r.totalCh}곳 중 ` : '';
   const y = b.nCh ? `유튜브에서는 ${total}${b.nCh}곳이 이미 다뤘고${b.firstTs ? ` 첫 영상은 ${spDur(r.at - b.firstTs)} 전` : ''}입니다 → ${b.timing || spTiming(b.nCh)}.` : '유튜브에서는 아직 다룬 곳이 없습니다.';
-  return y + (b.ours ? ` 정치신세계는 이미 다뤘습니다${b.oursRef ? '(' + esc(b.oursRef) + ')' : ''}.` : ' 정치신세계는 아직 다루지 않았습니다.');
+  return y;
 }
 function spBriefHtml(r){
   const bs = (r.briefs || []).slice(0, SP_BRIEF_SHOW);
@@ -1093,11 +1092,11 @@ function initShinpdMode(){
 
 /* ---------- 대화 ---------- */
 const SHINPD_PERSONA = [
-  '당신은 "신피디"입니다. 정치신세계 방송의 30대 PD이자 유튜브 채널 운영 파트너입니다. 편집장에게 존댓말로, 짧은 문장으로, 결론부터 말합니다.',
+  '당신은 "신피디"입니다. 써니사이드 방송의 PD이자 유튜브 채널 운영 파트너입니다. 사용자에게 존댓말로, 짧은 문장으로, 결론부터 말합니다.',
   '규칙: (1) 사실·숫자·시각·채널명은 아래 [리포트 데이터]에 있는 것만 말합니다. 없으면 "수집된 데이터에 없습니다"라고만 하고 추측해서 채우지 않습니다.',
   '(2) 근거 링크는 데이터에 있는 주소만 그대로 적고, 주소를 만들어 내지 않습니다.',
   SP_CHANNEL_ID,
-  '(3) 위 채널 정체성이 기본 시선입니다. 이슈가 이재명 정부·여당에 타격인지는 데이터의 이슈브리핑(정권영향·영향)을 근거로 말하고, 세계관 해석은 해석이라고 밝힙니다. 소재의 최종 선택은 편집장 몫입니다. 영상 제목·섬네일·각(다른 채널과 겹치지 않게 잡는 방향)은 요청받거나 데이터가 뒷받침할 때 적극적으로 조언하고, 우리 채널에서 조회수가 높았던 영상과 지금 다른 채널의 반응을 근거로 듭니다.',
+  '(3) 위 채널 정체성이 기본 시선입니다. 이슈가 이재명 정부·여당에 타격인지는 데이터의 이슈브리핑(정권영향·영향)을 근거로 말하고, 세계관 해석은 해석이라고 밝힙니다. 소재의 최종 선택은 사용자 몫입니다. 영상 제목·섬네일·각(다른 채널과 겹치지 않게 잡는 방향)은 요청받거나 데이터가 뒷받침할 때 적극적으로 조언하고, 우리 채널에서 조회수가 높았던 영상과 지금 다른 채널의 반응을 근거로 듭니다.',
   '(4) 성격이나 습관을 대사로 설명하지 않고, "경쟁 채널·경쟁사"라는 말을 쓰지 않습니다. 다른 채널은 실제 채널 이름으로, 일반적으로는 "다른 방송", "저쪽"이라고 합니다.',
   '(5) 이모티콘과 마크다운 서식(굵게·표)을 쓰지 않고 줄글과 줄바꿈으로만 답합니다. 답은 10줄 이내로 합니다.'
 ].join('\n');
@@ -1135,8 +1134,8 @@ function shinpdChatPaint(){
   const box = document.getElementById('shinpdChatLog');
   if(!box) return;
   if(typeof spIssueActive === 'function' && spIssueActive()){ spIssuePaint(); return; }
-  const pic = '<img class="tg-pic" src="shinpd-face.jpg?v=20261013b" alt="">';
-  const list = shinpdChat.length ? shinpdChat : [{ role: 'pd', text: '리포트 기준으로 물어보세요. 예: "정치신세계가 아직 안 다룬 소재는?" "이 이슈 유튜브 어디가 다뤘어요?"' }];
+  const pic = '<span class="tg-pic sp-noface">신</span>';
+  const list = shinpdChat.length ? shinpdChat : [{ role: 'pd', text: '리포트 기준으로 물어보세요. 예: "이 이슈 유튜브 어디가 다뤘어요?"' }];
   box.innerHTML = list.map(m=> m.role === 'user'
       ? `<div class="tg-row me"><div class="tg-msg me">${esc(m.text).replace(/\n/g, '<br>')}</div><span class="tg-me-av">${spMyInitial()}</span></div>`
       : `<div class="tg-row">${pic}<div class="tg-msg pd">${spLinkify(m.text)}</div></div>`).join('')
@@ -1225,8 +1224,8 @@ async function shinpdSend(){
   if(typeof shinpdPersonaReply === 'function'){
     ({ text, error } = await shinpdPersonaReply(shinpdChat.slice(0, -1), q));   // 페르소나 대화(app-shinpd-persona.js)
   }else{
-    const hist = shinpdChat.slice(-9, -1).map(m=> (m.role === 'user' ? '편집장: ' : '신피디: ') + m.text).join('\n');
-    const prompt = `${SHINPD_PERSONA}\n\n[리포트 데이터]\n${spSnapshotForChat(shinpdReport)}\n\n[이전 대화]\n${hist || '(없음)'}\n\n편집장: ${q}\n신피디:`;
+    const hist = shinpdChat.slice(-9, -1).map(m=> (m.role === 'user' ? '사용자: ' : '신피디: ') + m.text).join('\n');
+    const prompt = `${SHINPD_PERSONA}\n\n[리포트 데이터]\n${spSnapshotForChat(shinpdReport)}\n\n[이전 대화]\n${hist || '(없음)'}\n\n사용자: ${q}\n신피디:`;
     ({ text, error } = await callGeminiParts([{ text: prompt }]));
   }
   shinpdChatBusy = false;
