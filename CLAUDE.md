@@ -2,7 +2,7 @@
 
 정치·사회·국제·문화예술 뉴스와 유튜브·SNS를 한곳에서 모니터링하고, 스크랩해 리포트까지 쓰는 개인용 웹앱.
 **주인(써니)이 바이브코딩을 배우면서 직접 고쳐 나가는 프로젝트**다. 코드를 대신 고쳐 주기보다, 무엇을 왜 바꾸는지 짧게 설명하고 한 번에 한 가지씩 바꾼다.
-처음 개통하는 중이면 `SETUP.md`부터 같이 따라간다.
+처음 개통하는 중이면 **`HANDOVER.md`를 먼저 읽고**(한 번에 한 단계씩 안내하는 규칙과 순서가 있다), 서비스별 상세는 `SETUP.md`를 본다.
 
 ## 지금 연결된 Firebase
 - 지금은 **임시 프로젝트 `sunny-desk`**(앱 주소 `https://sunny-desk.web.app`)에 연결돼 있다. 써니가 자기 프로젝트로 바꿀 때는 `SETUP.md` 1단계를 자기 계정으로 다시 하고, 아래 값을 바꾼다: `config.js`(firebase, rtdbUrl), `people.html`·`sns-tool.html`의 `firebaseConfig`, `.firebaserc`, `worker-rss-relay.js`·`x-analysis/worker/x-search-worker.js`의 `ALLOWED_ORIGINS`.

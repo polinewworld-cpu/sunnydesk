@@ -1,5 +1,7 @@
 # 써니데스크 개통 가이드
 
+> 처음 시작한다면 **[HANDOVER.md](HANDOVER.md)** 를 먼저 보세요. 단계별로 한 번에 하나씩 안내하는 문서예요. 이 문서는 서비스별 상세 설명입니다.
+
 이 문서는 **대신 해 주는 문서가 아니라, 직접 해 보게 하는 문서**예요.
 서버, 계정, 키를 하나씩 만들면서 "이 앱이 어떻게 돌아가는지"를 몸으로 익히는 게 목표입니다.
 막히면 Claude Code에게 "SETUP.md 3단계에서 이런 에러가 나요"라고 붙여넣으세요.
@@ -25,7 +27,7 @@
 | Node.js 20 이상 | `node -v` |
 | Git | `git --version` |
 | Firebase CLI | `npm i -g firebase-tools` → `firebase --version` |
-| 계정 | 구글 계정, Cloudflare 계정(무료), 네이버 계정 |
+| 계정 | 구글 계정, Cloudflare 계정(무료), 네이버 클라우드 계정 |
 
 저장소를 받고 패키지를 설치합니다.
 
@@ -72,15 +74,18 @@ npm install
 
 > 참고: Worker를 고쳐서 다시 올릴 때는 반드시 `--keep-vars`를 붙이세요. 안 붙이면 3단계에서 넣을 키가 지워져요.
 
-## 3. 네이버 API 키 (뉴스 검색)
+## 3. 네이버 API 키 (키워드 검색)
 
-1. https://developers.naver.com → 로그인 → **Application → 애플리케이션 등록**.
-2. 사용 API: **검색**, **데이터랩(검색어 트렌드)**. (데이터랩은 신피디에서 쓸 때만 필요해요.)
-3. 나온 Client ID / Client Secret을 Worker에 **비밀값**으로 넣습니다. 코드에 쓰지 않아요.
+키워드로 기사를 찾는 기능에 필요해요. 실시간 탭은 이 키 없이도 나옵니다.
+
+1. 이 앱이 쓰는 곳은 네이버 **개발자센터(developers.naver.com)가 아니라 네이버 클라우드의 NAVER API HUB**입니다. Worker 코드가 `naverapihub.apigw.ntruss.com`으로 요청해요. 네이버 클라우드에 가입해서 **뉴스 검색**을 쓸 수 있는 애플리케이션을 등록하고 **Client ID / Secret**을 받습니다.
+2. 가입·등록 중에 결제수단이나 본인 인증을 요구할 수 있어요. 화면에 보이는 대로 따라가고, 무료 구간이 있는지도 화면에서 확인하세요.
+3. 나온 값을 Worker에 **비밀값**으로 넣습니다. 코드에 쓰지 않아요. 입력창이 뜨면 값을 붙여넣으세요.
    ```bash
    npx wrangler secret put NAVER_CLIENT_ID --name naver-news-proxy
    npx wrangler secret put NAVER_CLIENT_SECRET --name naver-news-proxy
    ```
+4. (신피디에서 검색어 추이를 쓸 때만) 데이터랩은 개발자센터 쪽 키를 쓰는 별도 경로예요. 신피디를 기획할 때 다시 정합니다.
 
 ## 4. YouTube Data API 키
 
