@@ -11,8 +11,8 @@
  */
 
 const ALLOWED_ORIGINS = new Set([
-  'https://YOUR_PROJECT_ID.web.app',      // 써니의 Firebase Hosting 주소
-  'https://YOUR_PROJECT_ID.firebaseapp.com',
+  'https://sunny-desk.web.app',      // 써니의 Firebase Hosting 주소
+  'https://sunny-desk.firebaseapp.com',
   'http://localhost:8793',
   'http://localhost:8794',
 ]);

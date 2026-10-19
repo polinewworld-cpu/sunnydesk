@@ -12,16 +12,16 @@ const JUNGLE_CONFIG = {
 
   /* ---------- Firebase ---------- */
   firebase: {
-    apiKey: "YOUR_FIREBASE_API_KEY",
-    authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-    projectId: "YOUR_PROJECT_ID",
-    storageBucket: "YOUR_PROJECT_ID.firebasestorage.app",
-    messagingSenderId: "YOUR_SENDER_ID",
-    appId: "YOUR_APP_ID"
+    apiKey: "AIzaSyAIcFaQtTwHAsEW5ATkLfA263r_cUvhzB8",
+    authDomain: "sunny-desk.firebaseapp.com",
+    projectId: "sunny-desk",
+    storageBucket: "sunny-desk.firebasestorage.app",
+    messagingSenderId: "161102629706",
+    appId: "1:161102629706:web:21c4cfa42138242a26cfb3"
   },
 
   /* Realtime Database (Firestore 이관 전까지 사용) */
-  rtdbUrl: 'https://YOUR_PROJECT_ID-default-rtdb.REGION.firebasedatabase.app',
+  rtdbUrl: 'https://sunny-desk-default-rtdb.asia-southeast1.firebasedatabase.app',
 
   /* ---------- Google API (유튜브 + 캘린더 공용) ---------- */
   googleApiKey: '',   // YouTube Data API 키(SETUP.md 4단계)

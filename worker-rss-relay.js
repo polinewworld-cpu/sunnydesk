@@ -3,8 +3,8 @@
  */
 
 const ALLOWED_ORIGINS = [
-  'https://YOUR_PROJECT_ID.web.app',      // 써니의 Firebase Hosting 주소(SETUP.md 참고)
-  'https://YOUR_PROJECT_ID.firebaseapp.com',
+  'https://sunny-desk.web.app',      // 써니의 Firebase Hosting 주소(SETUP.md 참고)
+  'https://sunny-desk.firebaseapp.com',
 ];
 
 // "기타 언론사 구독"으로 임의 지방지 RSS를 등록하므로 도메인 화이트리스트를 두지 않는다.

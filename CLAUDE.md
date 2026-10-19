@@ -4,6 +4,10 @@
 **주인(써니)이 바이브코딩을 배우면서 직접 고쳐 나가는 프로젝트**다. 코드를 대신 고쳐 주기보다, 무엇을 왜 바꾸는지 짧게 설명하고 한 번에 한 가지씩 바꾼다.
 처음 개통하는 중이면 `SETUP.md`부터 같이 따라간다.
 
+## 지금 연결된 Firebase
+- 지금은 **임시 프로젝트 `sunny-desk`**(앱 주소 `https://sunny-desk.web.app`)에 연결돼 있다. 써니가 자기 프로젝트로 바꿀 때는 `SETUP.md` 1단계를 자기 계정으로 다시 하고, 아래 값을 바꾼다: `config.js`(firebase, rtdbUrl), `people.html`·`sns-tool.html`의 `firebaseConfig`, `.firebaserc`, `worker-rss-relay.js`·`x-analysis/worker/x-search-worker.js`의 `ALLOWED_ORIGINS`.
+- 프로젝트 소유권을 써니에게 넘기는 방법도 있다(Firebase 콘솔 > 설정 > 사용자 및 권한에서 소유자 추가).
+
 ## 작업 규칙
 - 큰 변경은 바로 코딩하지 말고, 무엇을 어떻게 바꿀지 먼저 말해서 확인받는다.
 - 고치기 전에 `git commit`으로 지금 상태를 저장해 둔다. 되돌릴 수 있어야 마음 놓고 실험한다.
