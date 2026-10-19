@@ -48,7 +48,7 @@ Firebase, Cloudflare, 네이버 클라우드, Google Cloud 같은 서비스는 �
 ## 지금 상태 (사장님이 해 둔 것)
 
 - 코드: https://github.com/polinewworld-cpu/sunnydesk (키·개인정보는 모두 비워져 있어요)
-- **임시 Firebase 프로젝트 `sunny-desk`** (사장님 계정). 앱 주소는 `https://sunny-desk.web.app` 이에요. 구글 로그인, 데이터베이스(Realtime Database·Firestore), 보안 규칙까지 켜 둔 상태이고, **나중에 써니님이 자기 걸로 바꾸는 것이 목표**예요.
+- **임시 Firebase 프로젝트 `sunny-desk`** (사장님 계정). 앱 주소는 `https://sunny-desk.web.app` 이에요. 구글 로그인과 데이터베이스(Realtime Database·Firestore)는 만들어 뒀고(**보안 규칙은 아직 안 올렸어요. 3단계 4번에서 같이 올립니다**), **나중에 써니님이 자기 걸로 바꾸는 것이 목표**예요.
 - **아직 비어 있는 것**: 서버(Cloudflare Worker), 네이버 키, YouTube 키, Gemini 키. 그래서 지금은 로그인만 되고 뉴스는 안 나와요.
 - 화면에서 숨겨 둔 메뉴가 있어요(여론, 공지사항, 관심 탭 등). 자세한 건 `CLAUDE.md`를 보세요.
 - 아직 안 한 것: 국내정치/외신 탭 분리, 유튜브 카테고리 자유 만들기, 신피디. **이건 처음에 건드리지 않아요.** 사장님과 상의한 뒤에 합니다.
@@ -95,10 +95,12 @@ Worker는 브라우저 대신 네이버·RSS 같은 곳에 요청을 해 주는 
      ```
      npm i -g firebase-tools
      firebase login
+     firebase deploy --only database,firestore --project sunny-desk
      npm run check
      npm run build
      firebase deploy --only hosting --project sunny-desk
      ```
+   - 세 번째 줄(`database,firestore`)은 **데이터 보안 규칙을 올리는 것**이고, 처음 한 번만 하면 됩니다. 이걸 안 올리면 로그인은 돼도 데이터가 저장되지 않아요.
 5. 확인: `https://sunny-desk.web.app` → **뉴스 모니터링 → 실시간**에 기사가 나오는지 봅니다. 설정 → 언론사에서 구독할 언론사를 고르세요(구독한 언론사 기사만 보여요).
 
 > 이 Worker는 `sunny-desk` 주소에서 온 요청만 받도록 돼 있어요(`worker-rss-relay.js` 위쪽 `ALLOWED_ORIGINS`). 나중에 Firebase 프로젝트를 바꾸면 여기도 바꿔야 해요.
