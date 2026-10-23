@@ -11,7 +11,7 @@ service cloud.firestore {
     }
     function isMaster(){
       return signedIn() && (
-        request.auth.uid == '5WcQVLiuTyTq7odcuosJ7lyqULI3' ||
+        request.auth.uid == 'YOUR_MASTER_UID' ||   // 마스터 계정의 사용자 UID(Firebase 콘솔 > Authentication > 사용자). HANDOVER.md "이어서 할 일" 3번
         (allowed() && get(/databases/$(database)/documents/sns_allow/$(request.auth.uid)).data.master == true)
       );
     }
